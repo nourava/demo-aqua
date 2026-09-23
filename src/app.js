@@ -1485,7 +1485,7 @@ async function renderCurrentTab() {
 // HOUSEHOLD: HOME DASHBOARD
 // ----------------------------------------------------
 async function renderHouseholdHome(container, user) {
-  const { ward } = await getWardAlerts(user.ward);
+  const { ward, alerts } = await getWardAlerts(user.ward);
 
   // Real-time tests strictly isolated to the logged-in user
   let userTests = [];
@@ -1652,6 +1652,11 @@ async function renderHouseholdHome(container, user) {
       <div style="font-size: 0.82rem; color: var(--text-dim); margin-top: 6px;">
         Flooding / Waterlogging Status: <strong style="color: ${communityData.flood_risk === 'High' ? '#f87171' : '#34d399'};">${communityData.flood_risk}</strong>
       </div>
+      <div style="margin-top: 10px;">
+        <button class="btn btn-sm btn-secondary" id="btnGoToAlertsSolutions" style="width: auto; background: rgba(14, 165, 233, 0.15); border-color: rgba(14, 165, 233, 0.35); color: #38bdf8;">
+          💡 View Alternate Solutions (${alerts.length} Active) →
+        </button>
+      </div>
     </div>
 
     <!-- Community Overview Card (Dynamic database counts) -->
@@ -1703,6 +1708,7 @@ async function renderHouseholdHome(container, user) {
   document.getElementById('btnGoToMyTests')?.addEventListener('click', () => switchTab('mytests'));
   document.getElementById('btnGoToMyRequests')?.addEventListener('click', () => switchTab('myrequests'));
   document.getElementById('btnGoToCommunityView')?.addEventListener('click', () => switchTab('community'));
+  document.getElementById('btnGoToAlertsSolutions')?.addEventListener('click', () => switchTab('alerts'));
 }
 
 // ----------------------------------------------------
@@ -2912,36 +2918,196 @@ async function initLeafletMap(user) {
   }
 }
 
+// ----------------------------------------------------
+// ALERTS & ALTERNATE SOLUTIONS
+// ----------------------------------------------------
+function getAppliedSolutions(username) {
+  try {
+    return JSON.parse(localStorage.getItem(`applied_solutions_${username || 'default'}`) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function toggleAppliedSolution(username, solId) {
+  const list = getAppliedSolutions(username);
+  const idx = list.indexOf(solId);
+  if (idx > -1) {
+    list.splice(idx, 1);
+  } else {
+    list.push(solId);
+  }
+  localStorage.setItem(`applied_solutions_${username || 'default'}`, JSON.stringify(list));
+  return list.includes(solId);
+}
+
+function renderAlertCardWithSolutions(a, user) {
+  const solutions = a.alternateSolutions || [];
+  const appliedSolutions = getAppliedSolutions(user.username);
+
+  return `
+    <div class="alert-card ${a.type}" style="margin-bottom: 18px;">
+      <div class="alert-heading">
+        <span style="font-weight: 700; font-size: 0.98rem; display: flex; align-items: center; gap: 8px;">
+          ${a.type === 'contamination' ? '⚠️' : a.type === 'rainfall' ? '🌧️' : a.type === 'mosquito' ? '🦟' : a.type === 'flood' ? '🌊' : '🛡️'}
+          ${a.title}
+        </span>
+        <span class="badge ${a.severity === 'hazard' ? 'badge-danger' : 'badge-warn'}">${a.badge}</span>
+      </div>
+
+      <div class="alert-body" style="font-size: 0.88rem; line-height: 1.5; color: #f1f5f9; margin-bottom: 8px;">
+        ${a.message}
+      </div>
+
+      ${a.details ? `<div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">ℹ️ ${a.details}</div>` : ''}
+
+      ${
+        solutions.length > 0
+          ? `
+        <div class="solutions-wrapper">
+          <div class="solutions-header-row">
+            <div class="solutions-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a6 6 0 0 1 6 6c0 2.22-1.2 4.16-3 5.2V17a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-3.8C7.2 12.16 6 10.22 6 8a6 6 0 0 1 6-6z"></path><path d="M9 21h6"></path></svg>
+              <span>Recommended Alternate Solutions (${solutions.length})</span>
+            </div>
+            <span class="solutions-toggle-badge">${solutions.length} Actions Available</span>
+          </div>
+
+          <div class="solutions-grid" id="sol-grid-${a.id || a.type}">
+            ${solutions
+              .map((s) => {
+                const isApplied = appliedSolutions.includes(s.id);
+                return `
+                <div class="solution-card">
+                  <div class="solution-top">
+                    <div class="solution-heading">
+                      <span class="solution-icon">${s.icon || '💧'}</span>
+                      <span>${s.title}</span>
+                    </div>
+                    <span class="solution-tag">${s.tag || 'Recommended'}</span>
+                  </div>
+
+                  <div class="solution-meta-row">
+                    ${s.timeRequired ? `<div class="solution-meta-item">⏱️ <span>${s.timeRequired}</span></div>` : ''}
+                    ${s.cost ? `<div class="solution-meta-item">💰 <span>${s.cost}</span></div>` : ''}
+                    ${s.bestFor ? `<div class="solution-meta-item">🎯 <span>${s.bestFor}</span></div>` : ''}
+                  </div>
+
+                  <ol class="solution-steps">
+                    ${(s.steps || []).map((step) => `<li>${step}</li>`).join('')}
+                  </ol>
+
+                  ${
+                    s.effectiveness
+                      ? `
+                    <div class="solution-effectiveness">
+                      🛡️ <strong>Effectiveness:</strong> ${s.effectiveness}
+                    </div>
+                  `
+                      : ''
+                  }
+
+                  <div class="solution-footer">
+                    <button class="btn-solution-applied ${isApplied ? 'active-applied' : ''}" data-solid="${s.id}">
+                      ${isApplied ? '✓ Applied by Household' : 'Mark as Applied'}
+                    </button>
+
+                    ${
+                      s.action === 'book_tester'
+                        ? `
+                      <button class="btn-solution-action btn-sol-book-tester">
+                        Book Nearby Field Tester →
+                      </button>
+                    `
+                        : s.action === 'self_test'
+                        ? `
+                      <button class="btn-solution-action btn-sol-self-test">
+                        Start Water Test →
+                      </button>
+                    `
+                        : ''
+                    }
+                  </div>
+                </div>
+              `;
+              })
+              .join('')}
+          </div>
+        </div>
+      `
+          : ''
+      }
+    </div>
+  `;
+}
+
 // Alerts Page
 async function renderAlertsView(container, user) {
   const { alerts } = await getWardAlerts(user.ward);
+  const totalSolutions = alerts.reduce((acc, a) => acc + (a.alternateSolutions?.length || 0), 0);
 
   container.innerHTML = `
     <div class="card">
-      <div class="card-header">
-        <h2 class="card-title">Active Hazards & Advisories</h2>
-        <span class="badge ${alerts.length > 0 ? 'badge-danger' : 'badge-safe'}">${alerts.length} Active</span>
+      <div class="card-header" style="flex-wrap: wrap; gap: 8px;">
+        <div>
+          <h2 class="card-title">Active Hazards & Alternate Solutions</h2>
+          <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">
+            Targeted remediation, safe water alternatives, and preventive steps for ${user.ward}
+          </div>
+        </div>
+        <span class="badge ${alerts.length > 0 ? 'badge-danger' : 'badge-safe'}">${alerts.length} Active Alerts</span>
+      </div>
+
+      <div style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 16px; font-size: 0.82rem; color: #bae6fd; line-height: 1.5;">
+        💡 <strong>Actionable Household Guidance:</strong> Each alert below includes tested alternate safe-water solutions, disinfection protocols, or municipal relief resources. You can mark which solutions you have applied to keep track of your family's safety.
       </div>
 
       ${
         alerts.length > 0
-          ? alerts
-              .map(
-                (a) => `
-        <div class="alert-card ${a.type}">
-          <div class="alert-heading">
-            <span>${a.title}</span>
-            <span class="badge badge-warn">${a.badge}</span>
-          </div>
-          <div class="alert-body">${a.message}</div>
-        </div>
-      `
-              )
-              .join('')
+          ? alerts.map((a) => renderAlertCardWithSolutions(a, user)).join('')
           : '<div style="font-size: 0.9rem; color: var(--text-muted); padding: 10px 4px;">No active environmental hazard advisories for your area.</div>'
       }
     </div>
   `;
+
+  bindAlternateSolutionsEvents(container, user);
+}
+
+function bindAlternateSolutionsEvents(container, user) {
+  // Mark as Applied toggle
+  container.querySelectorAll('.btn-solution-applied').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const solId = e.currentTarget.getAttribute('data-solid');
+      const isNowApplied = toggleAppliedSolution(user.username, solId);
+      if (isNowApplied) {
+        e.currentTarget.classList.add('active-applied');
+        e.currentTarget.textContent = '✓ Applied by Household';
+        showToast('Solution marked as applied by your household!');
+      } else {
+        e.currentTarget.classList.remove('active-applied');
+        e.currentTarget.textContent = 'Mark as Applied';
+        showToast('Removed solution from applied list.');
+      }
+    });
+  });
+
+  // Direct Book Field Tester from solution
+  container.querySelectorAll('.btn-sol-book-tester').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      testSubOption = 'optionB';
+      selectedTesterForBooking = null;
+      switchTab('test');
+    });
+  });
+
+  // Direct Start Self Test from solution
+  container.querySelectorAll('.btn-sol-self-test').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      testSubOption = 'optionA';
+      selectedTesterForBooking = null;
+      switchTab('test');
+    });
+  });
 }
 
 // Profile Page
