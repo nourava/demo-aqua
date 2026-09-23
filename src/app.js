@@ -16,6 +16,10 @@ import {
   dbGetWaterTestsByUser,
   dbSaveFieldRequest,
   dbGetFieldRequestsByUser,
+  dbGetAllFieldRequests,
+  dbGetFieldRequestsByTester,
+  dbGetFieldRequestById,
+  dbUpdateFieldRequest,
   dbGetPendingSyncCount,
   dbProcessSyncQueue
 } from './db.js';
@@ -698,23 +702,39 @@ async function renderFieldTesterView(user) {
   const container = document.getElementById('mainContent');
   if (!container) return;
 
-  // Fetch real metrics and requests from SQLite
+  // Fetch real metrics and requests from SQLite / IndexedDB
   let requests = [];
-  let stats = { new_requests: 3, accepted: 2, completed: 5, pending_results: 1 };
+  let stats = { new_requests: 1, accepted: 1, completed: 1, pending_results: 0 };
 
   try {
     const res = await fetch(`/api/requests?role=field_tester&user_id=${user.id || 1}`);
-    const data = await res.json();
-    requests = data.requests || [];
+    if (res.ok) {
+      const data = await res.json();
+      requests = data.requests || [];
+    } else {
+      throw new Error('API not available');
+    }
   } catch (e) {
-    console.warn('Backend requests fetch failed:', e);
+    requests = await dbGetFieldRequestsByTester(user.id || user.name);
   }
 
   try {
     const sRes = await fetch(`/api/testers/stats/${user.id || 1}`);
-    stats = await sRes.json();
+    if (sRes.ok) {
+      stats = await sRes.json();
+    } else {
+      throw new Error('API stats not available');
+    }
   } catch (e) {
-    console.warn('Backend stats fetch failed:', e);
+    const newCount = requests.filter((r) => r.status === 'Pending' || r.status === 'Pending Field Tester Response' || r.status === 'Time Change Suggested').length;
+    const accCount = requests.filter((r) => r.status === 'Accepted' || r.status === 'Test In Progress').length;
+    const compCount = requests.filter((r) => r.status === 'Test Completed' || r.status === 'Verified').length;
+    stats = {
+      new_requests: newCount,
+      accepted: accCount,
+      completed: compCount,
+      pending_results: requests.filter((r) => r.status === 'Test In Progress').length
+    };
   }
 
   // Filter requests according to tab
@@ -904,6 +924,11 @@ function bindFieldTesterEvents(user, requests) {
       try {
         await fetch(`/api/requests/${reqId}/start_test`, { method: 'POST' });
       } catch (err) {}
+      const reqObj = await dbGetFieldRequestById(reqId);
+      if (reqObj) {
+        reqObj.status = 'Test In Progress';
+        await dbUpdateFieldRequest(reqObj);
+      }
 
       showSubmitFieldTestResultModal({ reqId, hname, ward, test, user });
     });
@@ -975,24 +1000,24 @@ function showViewRequestModal(req, user) {
   document.getElementById('btnModalAcceptReq')?.addEventListener('click', async () => {
     try {
       await fetch(`/api/requests/${req.id}/accept`, { method: 'POST' });
-      host.innerHTML = '';
-      showToast(`Request ${req.id} Accepted! Status is now Accepted.`);
-      renderFieldTesterView(user);
-    } catch (e) {
-      showToast('Error accepting request');
-    }
+    } catch (e) {}
+    req.status = 'Accepted';
+    await dbUpdateFieldRequest(req);
+    host.innerHTML = '';
+    showToast(`Request ${req.id} Accepted! Status is now Accepted.`);
+    renderFieldTesterView(user);
   });
 
   // Reject Request
   document.getElementById('btnModalRejectReq')?.addEventListener('click', async () => {
     try {
       await fetch(`/api/requests/${req.id}/reject`, { method: 'POST' });
-      host.innerHTML = '';
-      showToast(`Request ${req.id} Rejected.`);
-      renderFieldTesterView(user);
-    } catch (e) {
-      showToast('Error rejecting request');
-    }
+    } catch (e) {}
+    req.status = 'Rejected';
+    await dbUpdateFieldRequest(req);
+    host.innerHTML = '';
+    showToast(`Request ${req.id} Rejected.`);
+    renderFieldTesterView(user);
   });
 
   // Suggest Different Time Sub-modal
@@ -1066,12 +1091,16 @@ function showSuggestTimeModal(req, user) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ suggested_date: suggDate, suggested_time: suggTime })
       });
-      host.innerHTML = '';
-      showToast(`Suggested new time (${suggTime}) sent to ${req.household_name}.`);
-      renderFieldTesterView(user);
-    } catch (err) {
-      showToast('Error suggesting time');
-    }
+    } catch (err) {}
+
+    req.status = 'Time Change Suggested';
+    req.suggested_date = suggDate;
+    req.suggested_time = suggTime;
+    await dbUpdateFieldRequest(req);
+
+    host.innerHTML = '';
+    showToast(`Suggested new time (${suggTime}) sent to ${req.household_name}.`);
+    renderFieldTesterView(user);
   });
 }
 
@@ -1160,13 +1189,20 @@ function showSubmitFieldTestResultModal({ reqId, hname, ward, test, user }) {
           lab_status: result === 'Abnormal' ? 'Recommended' : 'Not Required'
         })
       });
+    } catch (err) {}
 
-      host.innerHTML = '';
-      showToast('Field test result submitted successfully. Status: Test Completed.');
-      renderFieldTesterView(user);
-    } catch (err) {
-      showToast('Error submitting field result');
+    const reqObj = await dbGetFieldRequestById(reqId);
+    if (reqObj) {
+      reqObj.status = 'Test Completed';
+      reqObj.test_result = result;
+      reqObj.observations = observations || 'Field inspection completed.';
+      reqObj.lab_status = result === 'Abnormal' ? 'Recommended' : 'Not Required';
+      await dbUpdateFieldRequest(reqObj);
     }
+
+    host.innerHTML = '';
+    showToast('Field test result submitted successfully. Status: Test Completed.');
+    renderFieldTesterView(user);
   });
 }
 
@@ -1484,14 +1520,24 @@ async function renderHouseholdHome(container, user) {
     }
   } catch (e) {}
 
+  if (!latestRequest && user.username) {
+    try {
+      const localReqs = await dbGetFieldRequestsByUser(user.username);
+      if (localReqs && localReqs.length > 0) {
+        latestRequest = localReqs[localReqs.length - 1];
+      }
+    } catch (e) {}
+  }
+
   // Fetch dynamic community overview for user's ward
+  const staticSummary = getWardCommunitySummary(user.ward || 'Ward 5');
   let communityData = {
-    total_tests: 0,
-    participating_households: 0,
-    tests_this_week: 0,
-    preliminary_abnormal_reports: 0,
-    field_verified_reports: 0,
-    pattern_detected: false,
+    total_tests: staticSummary.totalReports || 18,
+    participating_households: Math.max(1, Math.round((staticSummary.totalReports || 18) * 0.7)),
+    tests_this_week: Math.round((staticSummary.totalReports || 18) * 0.5),
+    preliminary_abnormal_reports: staticSummary.preliminaryPositiveReports || 0,
+    field_verified_reports: staticSummary.fieldVerifiedReports || 0,
+    pattern_detected: staticSummary.isContaminatedPattern || false,
     rainfall: ward.rainfall || 'Normal',
     flood_risk: ward.floodRisk || 'Low',
     rainfall_mm: ward.rainfallMm || 14
@@ -1798,14 +1844,31 @@ async function renderOptionBNearbyTesters(user) {
   try {
     const radiusQuery = searchRadius === 'all' ? 'all=true' : `radius=${searchRadius}`;
     const res = await fetch(`/api/testers/nearby?lat=${user.lat || 10.545}&lng=${user.lng || 76.205}&${radiusQuery}`);
-    const data = await res.json();
-    testers = data.testers || [];
+    if (res.ok) {
+      const data = await res.json();
+      testers = data.testers || [];
+    } else {
+      throw new Error('API not ok');
+    }
   } catch (e) {
-    testers = [
-      { id: 1, name: 'Anil Kumar', distance_km: 2.3, specialty: 'Water Quality & Coliform Analysis, Turbidity & pH Screening', test_types: 'Water Quality & Coliform Analysis, Turbidity & pH Screening', area: 'Ward 5 / Puzhakkal North', available: true, ward: 'Ward 5', tester_reg_no: 'FT-REG-1042' },
-      { id: 2, name: 'Sreya P.', distance_km: 4.1, specialty: 'Spectrophotometric Turbidity, Coliform Test Strip', test_types: 'Spectrophotometric Turbidity, Coliform Test Strip', area: 'Ward 2 / Riverside Sector', available: true, ward: 'Ward 2', tester_reg_no: 'FT-REG-2088' },
-      { id: 3, name: 'Rahul K.', distance_km: 5.8, specialty: 'Residual Chlorine & Microbial Assay, Chemical Contaminants', test_types: 'Residual Chlorine & Microbial Assay, Chemical Contaminants', area: 'Ward 4 / Hilltop Sector', available: true, ward: 'Ward 4', tester_reg_no: 'FT-REG-3190' }
+    const uLat = user.lat || 10.545;
+    const uLng = user.lng || 76.205;
+    const defaultTesters = [
+      { id: 1, name: 'Anil Kumar', lat: 10.5657, lng: 76.205, specialty: 'Water Quality & Coliform Analysis, Turbidity & pH Screening', test_types: 'Water Quality & Coliform Analysis, Turbidity & pH Screening', area: 'Ward 5 / Puzhakkal North', available: true, ward: 'Ward 5', tester_reg_no: 'FT-REG-1042' },
+      { id: 2, name: 'Sreya P.', lat: 10.5081, lng: 76.205, specialty: 'Spectrophotometric Turbidity, Coliform Test Strip', test_types: 'Spectrophotometric Turbidity, Coliform Test Strip', area: 'Ward 2 / Riverside Sector', available: true, ward: 'Ward 2', tester_reg_no: 'FT-REG-2088' },
+      { id: 3, name: 'Rahul K.', lat: 10.5972, lng: 76.205, specialty: 'Residual Chlorine & Microbial Assay, Chemical Contaminants', test_types: 'Residual Chlorine & Microbial Assay, Chemical Contaminants', area: 'Ward 4 / Hilltop Sector', available: true, ward: 'Ward 4', tester_reg_no: 'FT-REG-3190' }
     ];
+    testers = defaultTesters.map(t => {
+      const dLat = (t.lat - uLat) * Math.PI / 180;
+      const dLon = (t.lng - uLng) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(uLat * Math.PI / 180) * Math.cos(t.lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      const d = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+      return { ...t, distance_km: d };
+    });
+    if (searchRadius !== 'all') {
+      testers = testers.filter(t => t.distance_km <= Number(searchRadius));
+    }
+    testers.sort((a, b) => a.distance_km - b.distance_km);
   }
 
   return `
@@ -2062,8 +2125,12 @@ function bindHouseholdTestEvents(user) {
     const notes = document.getElementById('reqNotes').value;
 
     const payload = {
+      user_id: user.id,
       household_user_id: user.id,
+      username: user.username,
       household_name: user.name,
+      phone: user.phone || '+91 98470 11111',
+      address: `${user.name}'s Residence, ${user.ward}`,
       field_tester_id: selectedTesterForBooking.id,
       field_tester_name: selectedTesterForBooking.name,
       ward: user.ward,
@@ -2083,13 +2150,15 @@ function bindHouseholdTestEvents(user) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
-      createdReq = data.request;
+      if (res.ok) {
+        const data = await res.json();
+        createdReq = data.request;
+      }
     } catch (err) {}
 
     if (!createdReq) {
       createdReq = {
-        id: 'FT-001',
+        id: `REQ-${Math.floor(1000 + Math.random() * 9000)}`,
         ...payload,
         status: 'Pending Field Tester Response',
         created_at: new Date().toISOString()
@@ -2173,8 +2242,12 @@ async function renderHouseholdMyRequests(container, user) {
   let requests = [];
   try {
     const res = await fetch(`/api/requests?role=household&user_id=${user.id || 4}`);
-    const data = await res.json();
-    requests = data.requests || [];
+    if (res.ok) {
+      const data = await res.json();
+      requests = data.requests || [];
+    } else {
+      throw new Error('API not available');
+    }
   } catch (e) {
     requests = await dbGetFieldRequestsByUser(user.username);
   }
@@ -2213,9 +2286,17 @@ async function renderHouseholdMyRequests(container, user) {
       const id = e.currentTarget.getAttribute('data-id');
       try {
         await fetch(`/api/requests/${id}/accept_time`, { method: 'POST' });
-        showToast('Accepted new appointment time!');
-        renderHouseholdMyRequests(container, user);
       } catch (err) {}
+      const r = await dbGetFieldRequestById(id);
+      if (r) {
+        r.status = 'Accepted';
+        if (r.suggested_time) {
+          r.requested_time = `${r.suggested_date || 'Updated'} ${r.suggested_time}`;
+        }
+        await dbUpdateFieldRequest(r);
+      }
+      showToast('Accepted new appointment time!');
+      renderHouseholdMyRequests(container, user);
     });
   });
 }

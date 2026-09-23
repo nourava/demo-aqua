@@ -33,19 +33,22 @@ export async function loginUser(username, pin) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: cleanUsername, pin: String(pin).trim() })
       });
-      const data = await res.json();
-      if (res.ok && data.user) {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
-        await dbSaveUser(data.user);
-        return data.user;
-      } else if (res.status === 401 || res.status === 404) {
-        throw new Error(data.error || 'Authentication failed.');
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data && data.user) {
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
+          await dbSaveUser(data.user);
+          return data.user;
+        }
+      } else if (res.status === 401) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Incorrect password/PIN. Please try again.');
       }
     } catch (err) {
-      if (err.message && (err.message.includes('PIN') || err.message.includes('password') || err.message.includes('not found') || err.message.includes('Authentication'))) {
+      if (err.message && (err.message.includes('PIN') || err.message.includes('password') || err.message.includes('Incorrect'))) {
         throw err;
       }
-      console.warn('Network auth failed, falling back to local storage:', err);
+      console.warn('Network auth unavailable, falling back to local demo storage:', err);
     }
   }
 

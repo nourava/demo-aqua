@@ -213,32 +213,5 @@ export async function generateSituationSummary(wardId) {
     ruleSummary = `Conditions in ${ward.id} are currently stable with normal baseline water-test readings.`;
   }
 
-  // Attempt optional local Ollama (timeout 1.2s to prevent delay)
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1200);
-
-    const res = await fetch('http://localhost:11434/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama3:latest',
-        prompt: `Provide a calm, 2-sentence public advisory for ${ward.id}: Rainfall=${ward.rainfall}, Preliminary Positives=${summary.preliminaryPositiveReports}, Field Verified=${summary.fieldVerifiedReports}. Mention further authorized assessment if abnormal.`,
-        stream: false
-      }),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.response) {
-        return { summary: data.response.trim(), source: 'Ollama AI (Local)' };
-      }
-    }
-  } catch (e) {
-    // Offline / Ollama not running fallback
-  }
-
-  return { summary: ruleSummary, source: 'Rule Engine (Offline)' };
+  return { summary: ruleSummary, source: 'Rule Engine (Spatial-Temporal Verification)' };
 }

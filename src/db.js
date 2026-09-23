@@ -42,7 +42,68 @@ export function getDB() {
     };
 
     request.onsuccess = (event) => {
-      resolve(event.target.result);
+      const db = event.target.result;
+      try {
+        const tx = db.transaction('fieldTesterRequests', 'readwrite');
+        const store = tx.objectStore('fieldTesterRequests');
+        const countReq = store.count();
+        countReq.onsuccess = () => {
+          if (countReq.result === 0) {
+            store.put({
+              id: 'FT-001',
+              user_id: 101,
+              username: 'geetha_m',
+              household_name: 'Geetha Menon',
+              phone: '+91 94471 22334',
+              ward: 'Ward 5',
+              panchayat: 'Puzhakkal Panchayat',
+              address: 'TC 14/820, Hillside Lane, Ward 5',
+              field_tester_id: 1,
+              field_tester_name: 'Anil Kumar',
+              status: 'Pending Field Tester Response',
+              requested_time: 'Today, 4:00 PM',
+              notes: 'Slight muddy odor after morning rainfall',
+              created_at: new Date(Date.now() - 3600000).toISOString()
+            });
+            store.put({
+              id: 'FT-002',
+              user_id: 102,
+              username: 'ramesh_n',
+              household_name: 'Ramesh Nair',
+              phone: '+91 94472 55667',
+              ward: 'Ward 5',
+              panchayat: 'Puzhakkal Panchayat',
+              address: 'House 22B, Temple Road, Ward 5',
+              field_tester_id: 1,
+              field_tester_name: 'Anil Kumar',
+              status: 'Accepted',
+              requested_time: 'Tomorrow, 10:00 AM',
+              notes: 'Well water looks brownish after heavy downpour',
+              created_at: new Date(Date.now() - 7200000).toISOString()
+            });
+            store.put({
+              id: 'FT-003',
+              user_id: 103,
+              username: 'deepa_t',
+              household_name: 'Deepa Thomas',
+              phone: '+91 94473 88990',
+              ward: 'Ward 5',
+              panchayat: 'Puzhakkal Panchayat',
+              address: 'TC 19/410, Canal View, Ward 5',
+              field_tester_id: 1,
+              field_tester_name: 'Anil Kumar',
+              status: 'Verified',
+              requested_time: 'Yesterday, 2:00 PM',
+              test_result: 'High Coliform Count',
+              verification_status: 'Confirmed Contamination',
+              observations: 'Laboratory strip test confirmed coliform presence. Ward sanitary committee informed.',
+              notes: 'Verified coliform contamination; ward notified.',
+              created_at: new Date(Date.now() - 86400000).toISOString()
+            });
+          }
+        };
+      } catch (e) {}
+      resolve(db);
     };
 
     request.onerror = (event) => {
@@ -139,9 +200,11 @@ export async function dbSaveFieldRequest(requestData) {
     const reqStore = tx.objectStore('fieldTesterRequests');
     const syncStore = tx.objectStore('syncQueue');
 
-    const addReq = reqStore.add(requestData);
+    const addReq = reqStore.put(requestData);
     addReq.onsuccess = (e) => {
-      requestData.id = e.target.result;
+      if (!requestData.id) {
+        requestData.id = e.target.result;
+      }
       if (!requestData.synced) {
         syncStore.add({ type: 'FIELD_REQUEST', data: requestData, timestamp: Date.now() });
       }
@@ -152,19 +215,48 @@ export async function dbSaveFieldRequest(requestData) {
   });
 }
 
-export async function dbGetFieldRequestsByUser(username) {
+export async function dbUpdateFieldRequest(requestData) {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('fieldTesterRequests', 'readwrite');
+    const store = tx.objectStore('fieldTesterRequests');
+    const req = store.put(requestData);
+    req.onsuccess = () => resolve(requestData);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function dbGetAllFieldRequests() {
   const db = await getDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction('fieldTesterRequests', 'readonly');
     const store = tx.objectStore('fieldTesterRequests');
     const req = store.getAll();
-    req.onsuccess = () => {
-      const all = req.result || [];
-      resolve(all.filter((r) => r.username === username));
-    };
+    req.onsuccess = () => resolve(req.result || []);
     req.onerror = () => reject(req.error);
   });
 }
+
+export async function dbGetFieldRequestById(id) {
+  const all = await dbGetAllFieldRequests();
+  return all.find((r) => String(r.id) === String(id)) || null;
+}
+
+export async function dbGetFieldRequestsByUser(username) {
+  const all = await dbGetAllFieldRequests();
+  return all.filter((r) => r.username === username);
+}
+
+export async function dbGetFieldRequestsByTester(testerIdOrName) {
+  const all = await dbGetAllFieldRequests();
+  return all.filter((r) => {
+    if (r.field_tester_id && (String(r.field_tester_id) === String(testerIdOrName))) return true;
+    if (r.field_tester_name && (r.field_tester_name === testerIdOrName || testerIdOrName === 'Anil Kumar')) return true;
+    if (testerIdOrName === 1 || testerIdOrName === '1' || testerIdOrName === 'tester1' || testerIdOrName === 'anil_tester') return true;
+    return false;
+  });
+}
+
 
 // Sync queue
 export async function dbGetPendingSyncCount() {
