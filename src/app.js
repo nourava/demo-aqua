@@ -59,6 +59,22 @@ let mapLayers = {
   clusters: true
 };
 
+let homeMapLayers = {
+  waterTests: true,
+  fieldVerified: true,
+  rainfall: true,
+  floodHazard: true,
+  community: true
+};
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
   setupNetworkListeners();
@@ -245,7 +261,7 @@ function renderAuthScreen() {
             <!-- Test Types Multi-Select -->
             <div class="form-group">
               <label class="form-label">Test Types You Can Perform *</label>
-              <div style="display: flex; flex-direction: column; gap: 6px; background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); font-size: 0.82rem;">
+              <div style="display: flex; flex-direction: column; gap: 6px; background: var(--bg-muted); padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.82rem; color: var(--text-main);">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                   <input type="checkbox" name="testerTestTypes" value="Water Quality & Coliform Analysis" checked />
                   <span>Water Quality & Coliform Analysis</span>
@@ -278,8 +294,8 @@ function renderAuthScreen() {
               </div>
 
               <!-- Location Details Card -->
-              <div id="testerLocationCard" style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px; font-size: 0.84rem; line-height: 1.6;">
-                <div id="testerGeoStatus" style="color: #38bdf8; margin-bottom: 6px; font-weight: 600;">
+              <div id="testerLocationCard" style="background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px; font-size: 0.84rem; line-height: 1.6;">
+                <div id="testerGeoStatus" style="color: var(--primary); margin-bottom: 6px; font-weight: 600;">
                   📍 Default: Puzhakkal Panchayat, Ward 5
                 </div>
 
@@ -314,7 +330,7 @@ function renderAuthScreen() {
               </div>
 
               <!-- Brief explanation note -->
-              <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px; line-height: 1.4;">
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">
                 ℹ️ <em>Location coordinates are used to match households with nearby certified Field Testers. Your exact home address is never revealed to households.</em>
               </div>
             </div>
@@ -350,7 +366,7 @@ function renderAuthScreen() {
       ${
         authSuccessMsg
           ? `
-        <div style="max-width: 440px; margin: 0 auto 14px auto; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #a7f3d0; padding: 12px 16px; border-radius: 10px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+        <div style="max-width: 440px; margin: 0 auto 14px auto; background: #ecfdf5; border: 1px solid #10b981; color: #065f46; padding: 12px 16px; border-radius: 10px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
           <span><strong>${authSuccessMsg}</strong></span>
         </div>
@@ -374,9 +390,10 @@ function renderAuthScreen() {
       </div>
 
       <div class="auth-card">
-        <div style="font-weight: 700; font-size: 1.05rem; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+        <div style="font-weight: 700; font-size: 1.05rem; color: var(--text-main); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
           <span>${selectedRoleChoice === 'household' ? '🏠 Household Login' : '🧪 Field Tester Login'}</span>
         </div>
+
 
         <form id="formLogin">
           <div id="authErrorMsg"></div>
@@ -638,14 +655,35 @@ function bindAuthEvents() {
 function renderFieldTesterShell(root, user) {
   root.innerHTML = `
     <header class="app-header">
-      <div class="brand-badge" id="btnHeaderTester">
-        <div class="brand-icon" style="background: var(--accent-teal-gradient);">
-          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div class="brand-badge" id="btnHeaderTester" style="cursor: pointer;">
+          <div class="brand-icon" style="background: var(--primary);">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+          <div>
+            <span class="brand-name">AquaGuard</span>
+            <div class="brand-subtitle">Field Inspector Portal</div>
+          </div>
         </div>
-        <span class="brand-name">AquaGuard <small style="font-size: 0.65rem; color: #38bdf8;">INSPECTOR</small></span>
+
+        <!-- Desktop Navigation Bar for Field Tester -->
+        <nav class="desktop-nav">
+          <button class="nav-link ${testerNavTab === 'dashboard' ? 'active' : ''}" data-ttab="dashboard">Dashboard</button>
+          <button class="nav-link ${testerNavTab === 'new' ? 'active' : ''}" data-ttab="new">New Requests</button>
+          <button class="nav-link ${testerNavTab === 'accepted' ? 'active' : ''}" data-ttab="accepted">Accepted</button>
+          <button class="nav-link ${testerNavTab === 'completed' ? 'active' : ''}" data-ttab="completed">Completed</button>
+          <button class="nav-link ${testerNavTab === 'profile' ? 'active' : ''}" data-ttab="profile">Profile</button>
+        </nav>
       </div>
+
       <div class="header-actions">
-        <button class="btn btn-sm btn-danger" id="btnTesterLogoutHeader" style="width: auto; padding: 4px 10px; font-size: 0.74rem;">
+        <div class="user-chip" title="${user.name}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>${user.name.split(' ')[0]}</span>
+          <span style="color: var(--text-muted); font-weight: normal;">•</span>
+          <span style="color: var(--primary); font-weight: 600;">${user.ward || 'Ward 5'}</span>
+        </div>
+        <button class="btn-header-logout" id="btnTesterLogoutHeader" title="Sign out">
           Logout
         </button>
       </div>
@@ -655,7 +693,7 @@ function renderFieldTesterShell(root, user) {
       <!-- Tester Dynamic Content -->
     </main>
 
-    <!-- Field Tester Bottom Nav -->
+    <!-- Field Tester Mobile Bottom Nav -->
     <nav class="bottom-nav">
       <button class="nav-item ${testerNavTab === 'dashboard' ? 'active' : ''}" data-ttab="dashboard">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
@@ -663,7 +701,7 @@ function renderFieldTesterShell(root, user) {
       </button>
       <button class="nav-item ${testerNavTab === 'new' ? 'active' : ''}" data-ttab="new">
         <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-        <span>New Requests</span>
+        <span>New</span>
       </button>
       <button class="nav-item ${testerNavTab === 'accepted' ? 'active' : ''}" data-ttab="accepted">
         <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -684,13 +722,19 @@ function renderFieldTesterShell(root, user) {
 
   document.getElementById('btnTesterLogoutHeader')?.addEventListener('click', () => {
     logoutUser();
-    selectedRoleChoice = 'household';
+    selectedRoleChoice = 'field_tester';
     renderApp();
   });
 
-  document.querySelectorAll('.bottom-nav .nav-item').forEach((btn) => {
+  document.querySelectorAll('.bottom-nav .nav-item, .desktop-nav .nav-link').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       testerNavTab = e.currentTarget.getAttribute('data-ttab');
+      document.querySelectorAll('.bottom-nav .nav-item').forEach((item) => {
+        item.classList.toggle('active', item.getAttribute('data-ttab') === testerNavTab);
+      });
+      document.querySelectorAll('.desktop-nav .nav-link').forEach((item) => {
+        item.classList.toggle('active', item.getAttribute('data-ttab') === testerNavTab);
+      });
       renderFieldTesterView(user);
     });
   });
@@ -754,34 +798,33 @@ async function renderFieldTesterView(user) {
 
   container.innerHTML = `
     <!-- Top Greeting Header -->
-    <div class="user-banner" style="background: linear-gradient(135deg, rgba(20, 184, 166, 0.22) 0%, rgba(30, 41, 59, 0.9) 100%); border-color: rgba(20, 184, 166, 0.4);">
-      <div>
-        <h2 class="user-greeting">Hello, ${user.name.split(' ')[0]}</h2>
-        <div class="user-subtext" style="color: #5eead4;">
-          <span>Field Tester • ${user.ward || 'Ward 5'}</span>
-        </div>
+    <div class="welcome-section" style="margin-bottom: 16px;">
+      <div class="welcome-text">
+        <h1 class="welcome-title">Hello, ${user.name.split(' ')[0]}</h1>
+        <p class="welcome-subtitle">Field Inspector Portal • Authorized Water Safety Testing</p>
       </div>
-      <div>
-        <span class="badge badge-safe">Inspector Online</span>
+      <div class="location-badge">
+        <span class="badge badge-safe">● Certified Inspector</span>
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">${user.ward || 'Ward 5'}</span>
       </div>
     </div>
 
-    <!-- Summary Metrics Cards (Exact Specification: New Requests 3, Accepted 2, Completed 5, Pending Results 1) -->
+    <!-- Summary Metrics Cards -->
     <div class="tester-metrics-grid">
       <div class="metric-card">
-        <div class="metric-val" style="color: #fbbf24;">${stats.new_requests}</div>
+        <div class="metric-val" style="color: var(--warning);">${stats.new_requests}</div>
         <div class="metric-lbl">New Requests</div>
       </div>
       <div class="metric-card">
-        <div class="metric-val" style="color: #38bdf8;">${stats.accepted}</div>
+        <div class="metric-val" style="color: var(--primary);">${stats.accepted}</div>
         <div class="metric-lbl">Accepted</div>
       </div>
       <div class="metric-card">
-        <div class="metric-val" style="color: #34d399;">${stats.completed}</div>
+        <div class="metric-val" style="color: var(--success);">${stats.completed}</div>
         <div class="metric-lbl">Completed</div>
       </div>
       <div class="metric-card">
-        <div class="metric-val" style="color: #c084fc;">${stats.pending_results}</div>
+        <div class="metric-val" style="color: var(--text-secondary);">${stats.pending_results}</div>
         <div class="metric-lbl">Pending Results</div>
       </div>
     </div>
@@ -806,7 +849,7 @@ async function renderFieldTesterView(user) {
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
           Incoming Test Requests
         </h3>
         <span class="badge badge-info">${displayRequests.length} Showing</span>
@@ -816,7 +859,7 @@ async function renderFieldTesterView(user) {
         ${
           displayRequests.length > 0
             ? displayRequests.map((r) => renderTesterRequestCard(r)).join('')
-            : '<div style="text-align: center; padding: 20px; color: var(--text-dim);">No requests matching this view.</div>'
+            : '<div style="text-align: center; padding: 24px; color: var(--text-muted);">No requests matching this view.</div>'
         }
       </div>
     </div>
@@ -841,7 +884,7 @@ function renderTesterRequestCard(r) {
       </div>
 
       <div class="request-meta-grid">
-        <div>Household: <strong style="color: #fff;">${r.household_name}</strong></div>
+        <div>Household: <strong style="color: var(--text-main);">${r.household_name}</strong></div>
         <div>Ward: <strong>${r.ward}</strong></div>
         <div>Distance: <strong>${r.distance_km || 2.3} km</strong></div>
         <div>Test Type: <strong>${r.test_type}</strong></div>
@@ -950,7 +993,7 @@ function showViewRequestModal(req, user) {
           <span>Field Test Request – ${req.id}</span>
         </div>
 
-        <div style="font-size: 0.88rem; line-height: 1.8; color: #e2e8f0; margin-bottom: 14px;">
+        <div style="font-size: 0.88rem; line-height: 1.8; color: var(--text-main); margin-bottom: 14px;">
           <div><strong>Household:</strong> ${req.household_name}</div>
           <div><strong>Ward:</strong> ${req.ward}</div>
           <div><strong>Location:</strong> ${req.location_desc || req.ward}</div>
@@ -1353,19 +1396,48 @@ function renderFieldTesterProfile(container, user) {
 function renderHouseholdShell(root, user) {
   root.innerHTML = `
     <header class="app-header">
-      <div class="brand-badge" id="btnHeaderHome">
-        <div class="brand-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div class="brand-badge" id="btnHeaderHome" style="cursor: pointer;">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+          </div>
+          <div>
+            <span class="brand-name">AquaGuard</span>
+            <div class="brand-subtitle">Water Safety Platform</div>
+          </div>
         </div>
-        <span class="brand-name">AquaGuard</span>
+
+        <!-- Desktop Navigation Bar -->
+        <nav class="desktop-nav">
+          <button class="nav-link ${currentTab === 'home' ? 'active' : ''}" data-tab="home">Home</button>
+          <button class="nav-link ${currentTab === 'test' ? 'active' : ''}" data-tab="test">Test Water</button>
+          <button class="nav-link ${currentTab === 'mytests' ? 'active' : ''}" data-tab="mytests">My Tests</button>
+          <button class="nav-link ${currentTab === 'myrequests' ? 'active' : ''}" data-tab="myrequests">My Requests</button>
+          <button class="nav-link ${currentTab === 'community' ? 'active' : ''}" data-tab="community">Community</button>
+          <button class="nav-link ${currentTab === 'map' ? 'active' : ''}" data-tab="map">GIS Map</button>
+          <button class="nav-link ${currentTab === 'alerts' ? 'active' : ''}" data-tab="alerts">Alerts</button>
+          <button class="nav-link ${currentTab === 'profile' ? 'active' : ''}" data-tab="profile">Profile</button>
+        </nav>
       </div>
+
       <div class="header-actions">
         <div class="status-pill ${isOfflineMode ? 'offline' : 'online'}" id="statusBadge">
           <span class="status-dot"></span>
-          <span>${isOfflineMode ? 'Offline' : 'Online – Sync Available'}</span>
+          <span>${isOfflineMode ? 'Offline' : 'Online Sync'}</span>
         </div>
         <button class="status-toggle-btn" id="btnToggleOffline">
           ${isOfflineMode ? 'Go Online' : 'Simulate Offline'}
+        </button>
+
+        <div class="user-chip" id="btnHeaderProfile" title="${user.name}" style="cursor: pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span>${user.name.split(' ')[0]}</span>
+          <span style="color: var(--text-muted); font-weight: normal;">•</span>
+          <span style="color: var(--primary); font-weight: 600;">${user.ward || 'Ward 5'}</span>
+        </div>
+
+        <button class="btn-header-logout" id="btnHeaderLogout" title="Sign out">
+          Logout
         </button>
       </div>
     </header>
@@ -1374,7 +1446,7 @@ function renderHouseholdShell(root, user) {
       <!-- Dynamic Tab Content -->
     </main>
 
-    <!-- Household Navigation Bar with My Requests -->
+    <!-- Household Mobile Navigation Bar -->
     <nav class="bottom-nav">
       <button class="nav-item ${currentTab === 'home' ? 'active' : ''}" data-tab="home">
         <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
@@ -1420,8 +1492,14 @@ function renderHouseholdShell(root, user) {
 function bindHouseholdShellEvents() {
   document.getElementById('btnToggleOffline')?.addEventListener('click', toggleManualOffline);
   document.getElementById('btnHeaderHome')?.addEventListener('click', () => switchTab('home'));
+  document.getElementById('btnHeaderProfile')?.addEventListener('click', () => switchTab('profile'));
+  document.getElementById('btnHeaderLogout')?.addEventListener('click', () => {
+    logoutUser();
+    selectedRoleChoice = 'household';
+    renderApp();
+  });
 
-  document.querySelectorAll('.bottom-nav .nav-item').forEach((btn) => {
+  document.querySelectorAll('.bottom-nav .nav-item, .desktop-nav .nav-link').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       const tab = e.currentTarget.getAttribute('data-tab');
       if (tab) switchTab(tab);
@@ -1434,8 +1512,12 @@ function switchTab(tab) {
   document.querySelectorAll('.bottom-nav .nav-item').forEach((item) => {
     item.classList.toggle('active', item.getAttribute('data-tab') === tab);
   });
+  document.querySelectorAll('.desktop-nav .nav-link').forEach((link) => {
+    link.classList.toggle('active', link.getAttribute('data-tab') === tab);
+  });
   renderCurrentTab();
 }
+
 
 async function renderCurrentTab() {
   const user = getCurrentUser();
@@ -1485,7 +1567,7 @@ async function renderCurrentTab() {
 // HOUSEHOLD: HOME DASHBOARD
 // ----------------------------------------------------
 async function renderHouseholdHome(container, user) {
-  const { ward, alerts } = await getWardAlerts(user.ward);
+  const { ward } = await getWardAlerts(user.ward);
 
   // Real-time tests strictly isolated to the logged-in user
   let userTests = [];
@@ -1529,7 +1611,7 @@ async function renderHouseholdHome(container, user) {
     } catch (e) {}
   }
 
-  // Fetch dynamic community overview for user's ward
+  // Dynamic community overview for user's ward
   const staticSummary = getWardCommunitySummary(user.ward || 'Ward 5');
   let communityData = {
     total_tests: staticSummary.totalReports || 18,
@@ -1550,157 +1632,189 @@ async function renderHouseholdHome(container, user) {
   } catch (e) {}
 
   container.innerHTML = `
-    <!-- Top Greeting Banner -->
-    <div class="user-banner">
-      <div>
-        <h2 class="user-greeting">Welcome, ${user.name}</h2>
-        <div class="user-subtext">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-          <span>${user.ward} | ${user.panchayat || 'Local Panchayat'}</span>
-        </div>
+    <!-- Top Welcome Section -->
+    <div class="welcome-section">
+      <div class="welcome-text">
+        <h1 class="welcome-title">${getGreeting()}, ${user.name}</h1>
+        <p class="welcome-subtitle">Monitor your household water safety and stay informed about your community.</p>
       </div>
-      <div>
-        <button class="btn btn-sm btn-primary" id="btnQuickTestWater" style="width: auto;">
-          Test Water
-        </button>
+      <div class="location-badge">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+        <span>${user.ward || 'Ward 5'} | ${user.panchayat || 'Ernakulam Central'}</span>
       </div>
     </div>
 
-    <!-- Personal Water Tests Card -->
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan-light)" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-          My Water-Test Records
-        </h3>
-        ${
-          latestTest
-            ? `<span class="badge ${isTestAbnormalOrPositive(latestTest.result) ? 'badge-danger' : 'badge-safe'}">${latestTest.result}</span>`
-            : '<span class="badge badge-info">0 Recorded</span>'
-        }
+    <!-- Main Central GIS Map (Primary Visual Centerpiece) -->
+    <div class="gis-map-card">
+      <div class="map-header">
+        <div class="map-title-row">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+          <h2>Community Water Safety & Hazard GIS</h2>
+        </div>
+        <div class="map-layer-toggles">
+          <label class="layer-chip ${homeMapLayers.waterTests ? 'active' : ''}">
+            <input type="checkbox" id="chkHomeLyrTests" ${homeMapLayers.waterTests ? 'checked' : ''} />
+            <span class="legend-dot test"></span> Water Tests
+          </label>
+          <label class="layer-chip ${homeMapLayers.fieldVerified ? 'active' : ''}">
+            <input type="checkbox" id="chkHomeLyrVerified" ${homeMapLayers.fieldVerified ? 'checked' : ''} />
+            <span class="legend-dot verified"></span> Field Verified
+          </label>
+          <label class="layer-chip ${homeMapLayers.rainfall ? 'active' : ''}">
+            <input type="checkbox" id="chkHomeLyrRainfall" ${homeMapLayers.rainfall ? 'checked' : ''} />
+            <span class="legend-dot area"></span> Rainfall
+          </label>
+          <label class="layer-chip ${homeMapLayers.floodHazard ? 'active' : ''}">
+            <input type="checkbox" id="chkHomeLyrHazard" ${homeMapLayers.floodHazard ? 'checked' : ''} />
+            <span class="legend-dot hazard"></span> Flood / Hazard
+          </label>
+          <label class="layer-chip ${homeMapLayers.community ? 'active' : ''}">
+            <input type="checkbox" id="chkHomeLyrCommunity" ${homeMapLayers.community ? 'checked' : ''} />
+            <span class="legend-dot area" style="background-color: #64748b;"></span> Community
+          </label>
+        </div>
       </div>
-      ${
-        latestTest
-          ? `
-        <div style="font-size: 0.9rem; color: #f1f5f9;">
-          <strong>Latest Screening:</strong> ${latestTest.testType || latestTest.test_type} (${latestTest.date || latestTest.date_time})
-        </div>
-        <div style="display: flex; gap: 8px; margin-top: 10px;">
-          <button class="btn btn-sm btn-primary" id="btnHomeTestWater" style="width: auto;">+ Test Water</button>
-          <button class="btn btn-sm btn-secondary" id="btnGoToMyTests" style="width: auto;">View My Tests →</button>
-        </div>
-      `
-          : `
-        <div style="font-size: 0.92rem; color: var(--text-muted); margin-bottom: 12px;">
-          No water tests recorded yet.
-        </div>
-        <button class="btn btn-primary" id="btnHomeTestWater">
-          Test Water
-        </button>
-      `
-      }
+
+      <div id="homeMapContainer" class="gis-map-frame"></div>
+
+      <div class="map-legend-bar">
+        <div class="legend-item"><span class="legend-dot area"></span> Registered Household</div>
+        <div class="legend-item"><span class="legend-dot verified"></span> Field-Verified Test</div>
+        <div class="legend-item"><span class="legend-dot hazard" style="background: #ef4444; border-radius: 50%;"></span> Preliminary Abnormal</div>
+        <div class="legend-item"><span class="legend-dot hazard" style="background: #f59e0b;"></span> Hazard / Waterlogging Zone</div>
+        <div class="legend-item"><span class="legend-dot area" style="background: #94a3b8;"></span> Ward Boundary</div>
+      </div>
     </div>
 
-    <!-- Personal Field Tester Requests Card -->
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          My Field Tester Requests
-        </h3>
-        <span class="badge ${latestRequest ? (latestRequest.status === 'Accepted' ? 'badge-info' : latestRequest.status === 'Test Completed' || latestRequest.status === 'Verified' ? 'badge-safe' : 'badge-warn') : 'badge-info'}">
-          ${latestRequest ? latestRequest.status : '0 Active'}
-        </span>
+    <!-- Below the Map: 3 Clean Information Sections -->
+    <div class="dashboard-grid">
+      <!-- 1. Water Safety -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <div class="info-card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            Water Safety
+          </div>
+          ${
+            latestTest
+              ? `<span class="badge ${isTestAbnormalOrPositive(latestTest.result) ? 'badge-danger' : 'badge-safe'}">${latestTest.result}</span>`
+              : '<span class="badge badge-info">Not Screened</span>'
+          }
+        </div>
+        <div class="info-card-body">
+          ${
+            latestTest
+              ? `
+            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 2px;">
+              ${latestTest.testType || latestTest.test_type || 'Water Quality Test'}
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+              Tested on ${latestTest.date || latestTest.date_time} • Source: ${latestTest.source || 'Household Tap'}
+            </div>
+            <div class="info-card-actions">
+              <button class="btn btn-sm btn-primary" id="btnHomeTestWater">+ Test Water</button>
+              <button class="btn btn-sm btn-secondary" id="btnGoToMyTests">View History →</button>
+            </div>
+          `
+              : `
+            <div style="color: var(--text-muted); margin-bottom: 12px; font-size: 0.86rem;">
+              No water tests recorded yet. Screen your household water to detect safety risks early.
+            </div>
+            <button class="btn btn-sm btn-primary" id="btnHomeTestWater" style="width: 100%;">
+              Test Water
+            </button>
+          `
+          }
+        </div>
       </div>
-      ${
-        latestRequest
-          ? `
-        <div style="font-size: 0.86rem; color: #e2e8f0;">
-          Field Tester: <strong>${latestRequest.field_tester_name}</strong>
+
+      <!-- 2. Field Testing -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <div class="info-card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Field Testing
+          </div>
+          <span class="badge ${latestRequest ? (latestRequest.status === 'Accepted' ? 'badge-info' : latestRequest.status === 'Test Completed' || latestRequest.status === 'Verified' ? 'badge-safe' : 'badge-warn') : 'badge-info'}">
+            ${latestRequest ? latestRequest.status : 'No Requests'}
+          </span>
         </div>
-        <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">
-          Status: <strong>${latestRequest.status}</strong> • Appointment: ${latestRequest.requested_date} (${latestRequest.suggested_time || latestRequest.requested_time})
+        <div class="info-card-body">
+          ${
+            latestRequest
+              ? `
+            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 2px;">
+              ${latestRequest.field_tester_name || 'Field Tester'}
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+              Status: <strong>${latestRequest.status}</strong> • Date: ${latestRequest.requested_date} (${latestRequest.suggested_time || latestRequest.requested_time || 'Scheduled'})
+            </div>
+            <div class="info-card-actions">
+              <button class="btn btn-sm btn-secondary" id="btnGoToMyRequests">View Details →</button>
+              <button class="btn btn-sm btn-outline" id="btnFindFieldTester">Book Another</button>
+            </div>
+          `
+              : `
+            <div style="color: var(--text-muted); margin-bottom: 12px; font-size: 0.86rem;">
+              No Field Tester requests yet. Request an authorized professional to inspect and test your water.
+            </div>
+            <button class="btn btn-sm btn-secondary" id="btnFindFieldTester" style="width: 100%;">
+              Find a Field Tester
+            </button>
+          `
+          }
         </div>
-        <div style="margin-top: 8px;">
-          <button class="btn btn-sm btn-secondary" id="btnGoToMyRequests" style="width: auto;">
-            Open My Requests →
+      </div>
+
+      <!-- 3. Your Community -->
+      <div class="info-card card-full-width">
+        <div class="info-card-header">
+          <div class="info-card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+            Your Community Overview
+          </div>
+          <button class="btn btn-sm btn-secondary" id="btnGoToCommunityView" style="padding: 4px 10px; font-size: 0.78rem;">
+            Full Community Report →
           </button>
         </div>
-      `
-          : `
-        <div style="font-size: 0.88rem; color: var(--text-muted);">
-          No Field Tester requests yet.
-        </div>
-      `
-      }
-    </div>
-
-    <!-- Environmental Hazard Indicators (Clean: NO mosquito risk, NO fake disease claims) -->
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2"><path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 2 13h16a4.5 4.5 0 0 0 2-3.8z"></path></svg>
-          Environmental Conditions (${user.ward})
-        </h3>
-        <span class="badge ${communityData.rainfall === 'Heavy' ? 'badge-danger' : 'badge-safe'}">
-          ${communityData.rainfall === 'Heavy' ? 'Rainfall Warning' : 'Normal'}
-        </span>
-      </div>
-      <div style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.5;">
-        ${communityData.rainfall === 'Heavy' ? `Heavy rainfall observed in your ward (${communityData.rainfall_mm}mm). Local water sources and runoff may be affected.` : `Precipitation normal (${communityData.rainfall_mm}mm). Local conditions stable.`}
-      </div>
-      <div style="font-size: 0.82rem; color: var(--text-dim); margin-top: 6px;">
-        Flooding / Waterlogging Status: <strong style="color: ${communityData.flood_risk === 'High' ? '#f87171' : '#34d399'};">${communityData.flood_risk}</strong>
-      </div>
-      <div style="margin-top: 10px;">
-        <button class="btn btn-sm btn-secondary" id="btnGoToAlertsSolutions" style="width: auto; background: rgba(14, 165, 233, 0.15); border-color: rgba(14, 165, 233, 0.35); color: #38bdf8;">
-          💡 View Alternate Solutions (${alerts.length} Active) →
-        </button>
-      </div>
-    </div>
-
-    <!-- Community Overview Card (Dynamic database counts) -->
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
-          Community Water Status (${user.ward})
-        </h3>
-        <button class="btn btn-sm btn-secondary" id="btnGoToCommunityView" style="width: auto;">View Community →</button>
-      </div>
-      ${
-        communityData.total_tests === 0
-          ? `
-        <div style="font-size: 0.88rem; color: var(--text-muted); padding: 4px 0;">
-          No community test data available yet.
-        </div>
-      `
-          : `
-        <div class="stat-grid">
-          <div class="stat-item">
-            <div class="stat-value">${communityData.total_tests}</div>
-            <div class="stat-label">Total Water Tests</div>
+        <div class="info-card-body">
+          <div style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 8px;">
+            Community: <strong>${user.ward || 'Ward 5'}</strong> • Rainfall: <strong>${communityData.rainfall} (${communityData.rainfall_mm}mm)</strong> • Flooding Risk: <strong>${communityData.flood_risk}</strong>
           </div>
-          <div class="stat-item">
-            <div class="stat-value" style="color: ${communityData.preliminary_abnormal_reports > 0 ? '#f87171' : '#34d399'};">
-              ${communityData.preliminary_abnormal_reports}
+          <div class="community-stats-grid">
+            <div class="comm-stat-cell">
+              <div class="comm-stat-value">${communityData.participating_households}</div>
+              <div class="comm-stat-label">Participating Households</div>
             </div>
-            <div class="stat-label">Preliminary Abnormal</div>
+            <div class="comm-stat-cell">
+              <div class="comm-stat-value">${communityData.tests_this_week}</div>
+              <div class="comm-stat-label">Tests This Week</div>
+            </div>
+            <div class="comm-stat-cell">
+              <div class="comm-stat-value" style="color: ${communityData.preliminary_abnormal_reports > 0 ? 'var(--danger)' : 'var(--primary)'};">
+                ${communityData.preliminary_abnormal_reports}
+              </div>
+              <div class="comm-stat-label">Preliminary Abnormal</div>
+            </div>
+            <div class="comm-stat-cell">
+              <div class="comm-stat-value" style="color: var(--success);">${communityData.field_verified_reports}</div>
+              <div class="comm-stat-label">Field-Verified</div>
+            </div>
           </div>
         </div>
-      `
-      }
+      </div>
     </div>
   `;
 
-  document.getElementById('btnQuickTestWater')?.addEventListener('click', () => {
+  // Bind Actions
+  document.getElementById('btnHomeTestWater')?.addEventListener('click', () => {
     testSubOption = 'optionA';
     selectedTesterForBooking = null;
     switchTab('test');
   });
 
-  document.getElementById('btnHomeTestWater')?.addEventListener('click', () => {
-    testSubOption = 'optionA';
+  document.getElementById('btnFindFieldTester')?.addEventListener('click', () => {
+    testSubOption = 'optionB';
     selectedTesterForBooking = null;
     switchTab('test');
   });
@@ -1708,8 +1822,29 @@ async function renderHouseholdHome(container, user) {
   document.getElementById('btnGoToMyTests')?.addEventListener('click', () => switchTab('mytests'));
   document.getElementById('btnGoToMyRequests')?.addEventListener('click', () => switchTab('myrequests'));
   document.getElementById('btnGoToCommunityView')?.addEventListener('click', () => switchTab('community'));
-  document.getElementById('btnGoToAlertsSolutions')?.addEventListener('click', () => switchTab('alerts'));
+
+  // Bind Layer Toggles for Central Map
+  const toggleInputs = [
+    { id: 'chkHomeLyrTests', key: 'waterTests' },
+    { id: 'chkHomeLyrVerified', key: 'fieldVerified' },
+    { id: 'chkHomeLyrRainfall', key: 'rainfall' },
+    { id: 'chkHomeLyrHazard', key: 'floodHazard' },
+    { id: 'chkHomeLyrCommunity', key: 'community' }
+  ];
+
+  toggleInputs.forEach(({ id, key }) => {
+    const el = document.getElementById(id);
+    el?.addEventListener('change', (e) => {
+      homeMapLayers[key] = e.target.checked;
+      el.closest('.layer-chip')?.classList.toggle('active', e.target.checked);
+      mountGisMap('homeMapContainer', user, homeMapLayers);
+    });
+  });
+
+  // Mount central Leaflet GIS Map
+  await mountGisMap('homeMapContainer', user, homeMapLayers);
 }
+
 
 // ----------------------------------------------------
 // HOUSEHOLD: TEST WATER (OPTION A & OPTION B NEARBY)
@@ -1906,11 +2041,11 @@ async function renderOptionBNearbyTesters(user) {
       ${
         testers.length === 0
           ? `
-        <div style="text-align: center; padding: 24px 14px; background: rgba(15, 23, 42, 0.6); border-radius: var(--radius-md); border: 1px dashed var(--border-subtle); margin: 8px 0;">
-          <div style="font-size: 1.05rem; font-weight: 700; color: #fbbf24; margin-bottom: 6px;">
+        <div style="text-align: center; padding: 24px 14px; background: var(--bg-muted); border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin: 8px 0;">
+          <div style="font-size: 1.05rem; font-weight: 700; color: var(--warning); margin-bottom: 6px;">
             No nearby Field Testers available
           </div>
-          <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 14px;">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
             No registered testers found within ${searchRadius} km. You can expand your search radius to find testers serving adjoining wards.
           </p>
           <button class="btn btn-primary btn-set-radius" data-radius="25" style="width: auto; padding: 6px 16px; margin: 0 auto;">
@@ -1923,25 +2058,25 @@ async function renderOptionBNearbyTesters(user) {
           ${testers
             .map(
               (t) => `
-            <div class="tester-card" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px; background: rgba(15, 23, 42, 0.65); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 10px;">
+            <div class="tester-item">
               <div style="flex: 1;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
-                  <strong style="color: #fff; font-size: 0.98rem;">${t.name}</strong>
+                  <strong style="color: var(--text-main); font-size: 0.98rem;">${t.name}</strong>
                   ${t.tester_reg_no ? `<span class="badge badge-info" style="font-size: 0.65rem; padding: 2px 6px;">${t.tester_reg_no}</span>` : ''}
                 </div>
                 
                 <div class="tester-distance" style="font-size: 0.82rem; margin: 2px 0;">
-                  <span style="color: #38bdf8; font-weight: 600;">📍 ${t.distance_km} km away</span>
+                  <span style="color: var(--primary); font-weight: 600;">📍 ${t.distance_km} km away</span>
                   <span style="color: var(--text-muted);"> • </span>
-                  <span style="color: #cbd5e1;">${t.area || t.ward}</span>
+                  <span style="color: var(--text-secondary);">${t.area || t.ward}</span>
                   <span style="color: var(--text-muted);"> • </span>
-                  <span style="color: ${t.available ? '#34d399' : '#f87171'}; font-weight: 600;">
+                  <span style="color: ${t.available ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">
                     ${t.available ? '● Available' : '● Busy'}
                   </span>
                 </div>
 
-                <div class="tester-spec" style="font-size: 0.78rem; color: #94a3b8; margin-top: 4px;">
-                  🧪 Tests: <span style="color: #e2e8f0;">${t.test_types || t.specialty || 'Water Quality Testing'}</span>
+                <div class="tester-spec" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                  🧪 Tests: <span style="color: var(--text-main); font-weight: 500;">${t.test_types || t.specialty || 'Water Quality Testing'}</span>
                 </div>
               </div>
 
@@ -1969,7 +2104,7 @@ function renderOptionBConfirmation(tester, user, today) {
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
           Request Field Test
         </h3>
         <button class="btn btn-sm btn-secondary" id="btnBackToTesters" style="width: auto;">
@@ -1977,11 +2112,12 @@ function renderOptionBConfirmation(tester, user, today) {
         </button>
       </div>
 
-      <div style="background: rgba(15, 23, 42, 0.7); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px; border: 1px solid var(--border-subtle); font-size: 0.86rem; line-height: 1.6;">
-        <div>Field Tester: <strong style="color: #fff;">${tester.name}</strong> (${tester.distance_km} km away)</div>
+      <div style="background: var(--bg-muted); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px; border: 1px solid var(--border-color); font-size: 0.86rem; line-height: 1.6; color: var(--text-main);">
+        <div>Field Tester: <strong style="color: var(--text-main);">${tester.name}</strong> (${tester.distance_km} km away)</div>
         <div>Service Area: <strong>${tester.area || tester.ward}</strong></div>
         <div>Household Location: <strong>${user.name}'s saved location (${user.ward})</strong></div>
       </div>
+
 
       <form id="formSendFieldRequest">
         <div class="form-group">
@@ -2316,20 +2452,20 @@ function renderHouseholdRequestCard(r) {
   return `
     <div class="my-test-card" style="border-color: ${
       isCompleted
-        ? 'rgba(16, 185, 129, 0.4)'
+        ? 'var(--primary-border)'
         : isAccepted
-        ? 'rgba(14, 165, 233, 0.4)'
+        ? 'var(--primary)'
         : isTimeSuggested
-        ? 'rgba(245, 158, 11, 0.5)'
+        ? 'var(--warning)'
         : isRejected
-        ? 'rgba(239, 68, 68, 0.4)'
-        : 'rgba(245, 158, 11, 0.3)'
+        ? 'var(--danger)'
+        : 'var(--border-color)'
     };">
       <div class="my-test-top">
         <div>
-          <strong style="color: #fff; font-size: 1rem;">${r.id}</strong>
+          <strong style="color: var(--text-main); font-size: 1rem;">${r.id}</strong>
           <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 1px;">
-            Field Tester: <strong style="color: #fff;">${r.field_tester_name}</strong>
+            Field Tester: <strong style="color: var(--text-main);">${r.field_tester_name}</strong>
           </div>
         </div>
         <span class="badge ${
@@ -2337,7 +2473,7 @@ function renderHouseholdRequestCard(r) {
         }">${r.status}</span>
       </div>
 
-      <div style="font-size: 0.85rem; color: #e2e8f0; line-height: 1.6;">
+      <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
         <div>Test: <strong>${r.test_type}</strong></div>
         <div>Requested: <strong>${r.requested_time || '4:00 PM'}</strong></div>
         ${r.suggested_time ? `<div>Updated appointment: <strong>${r.suggested_time}</strong></div>` : ''}
@@ -2368,7 +2504,7 @@ function renderHouseholdRequestCard(r) {
       ${
         isAccepted
           ? `
-        <div style="font-size: 0.82rem; color: #38bdf8; margin-top: 4px;">
+        <div style="font-size: 0.82rem; color: var(--primary); margin-top: 4px; font-weight: 500;">
           ✓ Field Tester Accepted Your Request. Visit confirmed for ${r.suggested_time || r.requested_time}.
         </div>
       `
@@ -2378,12 +2514,12 @@ function renderHouseholdRequestCard(r) {
       ${
         isCompleted
           ? `
-        <div style="font-size: 0.82rem; line-height: 1.6; color: #a7f3d0; background: rgba(16, 185, 129, 0.1); padding: 8px 10px; border-radius: 6px; margin-top: 4px;">
-          <div>Result: <strong style="color: ${r.field_result === 'Abnormal' ? '#f87171' : '#34d399'};">${r.field_result || 'Abnormal'}</strong></div>
+        <div style="font-size: 0.82rem; line-height: 1.6; color: var(--success); background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 10px; border-radius: 6px; margin-top: 4px;">
+          <div>Result: <strong style="color: ${r.field_result === 'Abnormal' ? 'var(--danger)' : 'var(--success)'};">${r.field_result || 'Abnormal'}</strong></div>
           <div>Verification: <strong>Completed</strong></div>
           ${
             r.lab_status === 'Recommended'
-              ? '<div style="color: #c084fc; font-weight: 700;">Certified Lab Verification Recommended</div>'
+              ? '<div style="color: var(--primary); font-weight: 700;">Certified Lab Verification Recommended</div>'
               : ''
           }
         </div>
@@ -2411,7 +2547,7 @@ async function renderHouseholdMyTests(container, user) {
     <div class="card">
       <div class="card-header">
         <h2 class="card-title">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan-light)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
           Water Quality Tests & History
         </h2>
         <button class="btn btn-sm btn-primary" id="btnAddNewTestMy" style="width: auto;">
@@ -2428,8 +2564,8 @@ async function renderHouseholdMyTests(container, user) {
           <div class="my-test-card">
             <div class="my-test-top">
               <div>
-                <strong style="color: #fff;">${t.test_type || t.testType || 'Water Quality Test'}</strong>
-                <div style="font-size: 0.78rem; color: var(--text-dim);">
+                <strong style="color: var(--text-main);">${t.test_type || t.testType || 'Water Quality Test'}</strong>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">
                   Type: <b>${t.source === 'field' ? 'Field Verification' : 'Home Screening'}</b>
                   ${t.tester_name ? `• Tester: <b>${t.tester_name}</b>` : ''}
                 </div>
@@ -2438,6 +2574,7 @@ async function renderHouseholdMyTests(container, user) {
                 isTestAbnormalOrPositive(t.result) ? 'badge-danger' : t.result === 'Normal' ? 'badge-safe' : 'badge-warn'
               }">${t.result}</span>
             </div>
+
 
             <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">
               Date: ${t.date_time || t.date}
@@ -2541,10 +2678,10 @@ async function renderCommunityView(container, user) {
         ? `
       <!-- Empty Community State -->
       <div class="card" style="text-align: center; padding: 26px 16px;">
-        <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: #38bdf8;">
+        <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: var(--primary);">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
         </div>
-        <h3 style="font-size: 1.15rem; color: #fff; margin-bottom: 6px; font-weight: 700;">No community test data available yet.</h3>
+        <h3 style="font-size: 1.15rem; color: var(--text-main); margin-bottom: 6px; font-weight: 700;">No community test data available yet.</h3>
         <p style="font-size: 0.88rem; color: var(--text-muted); max-width: 440px; margin: 0 auto 16px; line-height: 1.5;">
           There are currently no registered test records for ${user.ward}. As households in this locality perform water screenings, community trends will update here automatically.
         </p>
@@ -2557,7 +2694,7 @@ async function renderCommunityView(container, user) {
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2"><path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 2 13h16a4.5 4.5 0 0 0 2-3.8z"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 2 13h16a4.5 4.5 0 0 0 2-3.8z"></path></svg>
             Environmental Hazard Overview (${user.ward})
           </h3>
           <span class="badge ${commData.rainfall === 'Heavy' ? 'badge-danger' : 'badge-safe'}">${commData.rainfall}</span>
@@ -2568,7 +2705,7 @@ async function renderCommunityView(container, user) {
             <div class="stat-label">Precipitation (${commData.rainfall_mm}mm)</div>
           </div>
           <div class="stat-item">
-            <div class="stat-value" style="font-size: 1.25rem; color: ${commData.flood_risk === 'High' ? '#f87171' : '#34d399'};">${commData.flood_risk}</div>
+            <div class="stat-value" style="font-size: 1.25rem; color: ${commData.flood_risk === 'High' ? 'var(--danger)' : 'var(--success)'};">${commData.flood_risk}</div>
             <div class="stat-label">Flooding / Waterlogging</div>
           </div>
         </div>
@@ -2578,7 +2715,7 @@ async function renderCommunityView(container, user) {
       <!-- Ward-Level Response View Card -->
       <div class="ward-response-card ${commData.pattern_detected ? 'attention' : ''}">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <h2 style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">
             ${user.ward} Community Response View
           </h2>
           <span class="badge ${commData.response_status === 'Attention Required' ? 'badge-danger' : 'badge-safe'}">
@@ -2593,7 +2730,7 @@ async function renderCommunityView(container, user) {
 
         <div class="response-row">
           <span class="response-label">Participating Households:</span>
-          <span class="response-val" style="color: #38bdf8;">${commData.participating_households}</span>
+          <span class="response-val" style="color: var(--primary); font-weight: 600;">${commData.participating_households}</span>
         </div>
 
         <div class="response-row">
@@ -2603,28 +2740,28 @@ async function renderCommunityView(container, user) {
 
         <div class="response-row">
           <span class="response-label">Preliminary Abnormal Reports:</span>
-          <span class="response-val" style="color: ${commData.preliminary_abnormal_reports > 0 ? '#f87171' : '#34d399'};">
+          <span class="response-val" style="color: ${commData.preliminary_abnormal_reports > 0 ? 'var(--danger)' : 'var(--success)'};">
             ${commData.preliminary_abnormal_reports}
           </span>
         </div>
 
         <div class="response-row">
           <span class="response-label">Field-Verified Reports:</span>
-          <span class="response-val" style="color: #38bdf8;">
+          <span class="response-val" style="color: var(--primary); font-weight: 600;">
             ${commData.field_verified_reports}
           </span>
         </div>
 
         <div class="response-row">
           <span class="response-label">Possible Water-Quality Pattern:</span>
-          <span class="response-val" style="color: ${commData.pattern_detected ? '#f87171' : '#34d399'};">
+          <span class="response-val" style="color: ${commData.pattern_detected ? 'var(--danger)' : 'var(--success)'};">
             ${commData.pattern_detected ? 'Yes (Multiple abnormal reports)' : 'None detected'}
           </span>
         </div>
 
         <div class="response-row">
           <span class="response-label">Current Rainfall / Hazard:</span>
-          <span class="response-val" style="color: ${commData.rainfall === 'Heavy' ? '#38bdf8' : '#e2e8f0'};">
+          <span class="response-val" style="color: ${commData.rainfall === 'Heavy' ? 'var(--primary)' : 'var(--text-secondary)'};">
             ${commData.rainfall} (${commData.rainfall_mm}mm) • Flood Risk: ${commData.flood_risk}
           </span>
         </div>
@@ -2634,14 +2771,14 @@ async function renderCommunityView(container, user) {
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan-light)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
             Situation Assessment
           </h3>
           <span class="badge ${commData.pattern_detected ? 'badge-danger' : 'badge-safe'}">
             ${commData.pattern_detected ? 'Advisory Active' : 'Normal'}
           </span>
         </div>
-        <p style="font-size: 0.92rem; line-height: 1.5; color: #f1f5f9;">
+        <p style="font-size: 0.92rem; line-height: 1.5; color: var(--text-main);">
           ${
             commData.pattern_detected
               ? `Possible water-quality pattern detected based on multiple abnormal reports in ${user.ward}. Local residents are advised to perform individual home screenings or request certified field verification.`
@@ -2649,6 +2786,7 @@ async function renderCommunityView(container, user) {
           }
         </p>
       </div>
+
 
       <!-- Privacy-Safe Area Feed -->
       ${
@@ -2686,21 +2824,223 @@ async function renderCommunityView(container, user) {
   document.getElementById('btnCommEmptyStartTest')?.addEventListener('click', () => switchTab('test'));
 }
 
-// GIS Map
+// ====================================================
+// 4. GIS MAP IMPLEMENTATION (LIGHT CARTODB POSITRON)
+// ====================================================
+async function mountGisMap(containerId, user, layerConfig) {
+  if (activeMapInstance) {
+    try {
+      activeMapInstance.remove();
+    } catch (e) {}
+    activeMapInstance = null;
+  }
+
+  const mapElement = document.getElementById(containerId);
+  if (!mapElement) return;
+
+  const currentWard = WARDS.find((w) => w.id === user.ward) || WARDS[4];
+  const centerLat = user.lat || currentWard.center[0];
+  const centerLng = user.lng || currentWard.center[1];
+
+  const map = L.map(containerId, {
+    zoomControl: true,
+    attributionControl: false
+  }).setView([centerLat, centerLng], 14);
+
+  activeMapInstance = map;
+
+  // Clean Light Base Map: CartoDB Positron
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    subdomains: 'abcd',
+    crossOrigin: true
+  }).addTo(map);
+
+  // 1. Community Boundaries
+  const showCommunity = layerConfig.community ?? layerConfig.wards;
+  if (showCommunity) {
+    WARDS.forEach((ward) => {
+      const isUserWard = ward.id === user.ward;
+      const polygon = L.polygon(ward.polygon, {
+        color: isUserWard ? '#0f766e' : '#94a3b8',
+        weight: isUserWard ? 2.5 : 1.2,
+        fillColor: isUserWard ? '#0f766e' : '#cbd5e1',
+        fillOpacity: isUserWard ? 0.08 : 0.04
+      }).addTo(map);
+
+      polygon.bindPopup(`
+        <div style="font-size: 0.85rem; line-height: 1.45; color: #0f172a;">
+          <strong style="color: #0f766e;">Registered Community Boundary</strong><br/>
+          Community: <b>${ward.name}</b><br/>
+          Environmental Rainfall: <b>${ward.rainfall} (${ward.rainfallMm}mm)</b><br/>
+          Flooding / Waterlogging: <b>${ward.floodRisk}</b>
+        </div>
+      `);
+    });
+  }
+
+  // 2. Flood & Hazard Affected Zones
+  const showHazard = layerConfig.floodHazard ?? layerConfig.hazard;
+  if (showHazard) {
+    FLOOD_HAZARD_ZONES.forEach((zone) => {
+      const poly = L.polygon(zone.polygon, {
+        color: '#d97706',
+        weight: 1.5,
+        fillColor: '#f59e0b',
+        fillOpacity: 0.2
+      }).addTo(map);
+
+      poly.bindPopup(`
+        <div style="font-size: 0.85rem; line-height: 1.45; color: #0f172a;">
+          <strong style="color: #d97706;">Environmental Hazard Indicator</strong><br/>
+          Flooding / Waterlogging Affected Zone<br/>
+          <small style="color: #64748b;">Observed surface water accumulation area following rainfall.</small>
+        </div>
+      `);
+    });
+  }
+
+  // 3. Rainfall Advisory
+  const showRainfall = layerConfig.rainfall ?? (layerConfig.hazard && currentWard.rainfall === 'Heavy');
+  if (showRainfall && currentWard.rainfall === 'Heavy') {
+    const rainCircle = L.circle(currentWard.center, {
+      radius: 650,
+      color: '#0284c7',
+      fillColor: '#0284c7',
+      fillOpacity: 0.12,
+      weight: 1.5,
+      dashArray: '4, 4'
+    }).addTo(map);
+
+    rainCircle.bindPopup(`
+      <div style="font-size: 0.85rem; line-height: 1.45; color: #0f172a;">
+        <strong style="color: #0284c7;">Rainfall Advisory Zone</strong><br/>
+        Observed Rainfall: <b>Heavy (${currentWard.rainfallMm}mm)</b><br/>
+        <small style="color: #64748b;">High runoff conditions may increase microbial contamination risk in shallow wells.</small>
+      </div>
+    `);
+  }
+
+  // 4. Derived Water-Quality Pattern (clusters)
+  const showClusters = layerConfig.clusters;
+  if (showClusters && (user.ward === 'Ward 5' || currentWard.id === 'Ward 5')) {
+    const circle = L.circle(currentWard.center, {
+      radius: 460,
+      color: '#ef4444',
+      fillColor: '#ef4444',
+      fillOpacity: 0.18,
+      weight: 1.5,
+      dashArray: '3, 3'
+    }).addTo(map);
+
+    circle.bindPopup(`
+      <div style="font-size: 0.85rem; line-height: 1.45; color: #0f172a;">
+        <strong style="color: #dc2626;">Spatial Pattern Indicator</strong><br/>
+        Multiple abnormal reports detected in this locality.<br/>
+        <small style="color: #64748b;">Preliminary indicator; field verification recommended.</small>
+      </div>
+    `);
+  }
+
+  // 5. Water Tests (Household & Community Tests)
+  const showTests = layerConfig.waterTests ?? layerConfig.preliminary;
+  if (showTests) {
+    try {
+      const allTests = await dbGetAllWaterTests();
+      const wardTests = allTests.filter((t) => t.ward === user.ward);
+      wardTests.forEach((t) => {
+        const isAbnormal = isTestAbnormalOrPositive(t.result);
+        const pLat = t.lat || (centerLat + (Math.random() - 0.5) * 0.006);
+        const pLng = t.lng || (centerLng + (Math.random() - 0.5) * 0.006);
+        const marker = L.circleMarker([pLat, pLng], {
+          radius: 6,
+          color: isAbnormal ? '#dc2626' : '#16a34a',
+          fillColor: isAbnormal ? '#ef4444' : '#22c55e',
+          fillOpacity: 0.85,
+          weight: 1.5
+        }).addTo(map);
+
+        marker.bindPopup(`
+          <div style="font-size: 0.85rem; line-height: 1.4; color: #0f172a;">
+            <strong style="color: ${isAbnormal ? '#dc2626' : '#16a34a'};">Water-Test Screening</strong><br/>
+            Test Type: <b>${t.test_type || t.testType || 'Home Screening'}</b><br/>
+            Source: <b>${t.source || 'Household Tap'}</b><br/>
+            Result: <b style="color: ${isAbnormal ? '#dc2626' : '#16a34a'};">${t.result}</b><br/>
+            Date: ${t.date_time || t.date || 'Recent'}
+          </div>
+        `);
+      });
+    } catch (e) {}
+  }
+
+  // 6. Field-Verified Reports
+  const showVerified = layerConfig.fieldVerified ?? layerConfig.verified;
+  if (showVerified) {
+    try {
+      const allTests = await dbGetAllWaterTests();
+      const verifiedTests = allTests.filter((t) => t.ward === user.ward && (t.verification_status === 'Verified' || (t.fieldVerification && t.fieldVerification.status === 'Verified')));
+      verifiedTests.forEach((t) => {
+        const vLat = t.lat || (centerLat + (Math.random() - 0.5) * 0.005);
+        const vLng = t.lng || (centerLng + (Math.random() - 0.5) * 0.005);
+        const marker = L.circleMarker([vLat, vLng], {
+          radius: 7,
+          color: '#0f766e',
+          fillColor: '#14b8a6',
+          fillOpacity: 0.95,
+          weight: 2
+        }).addTo(map);
+
+        marker.bindPopup(`
+          <div style="font-size: 0.85rem; line-height: 1.4; color: #0f172a;">
+            <strong style="color: #0f766e;">Authorized Field Verification</strong><br/>
+            Tester: <b>${t.tester_name || 'Certified Field Tester'}</b><br/>
+            Result: <b>${t.result || 'Verified Safe'}</b><br/>
+            Status: <b style="color: #0f766e;">Field Verified</b>
+          </div>
+        `);
+      });
+    } catch (e) {}
+  }
+
+  // 7. Registered Household Location Pin
+  const showHousehold = layerConfig.household ?? true;
+  if (showHousehold && user.role !== 'field_tester') {
+    const householdIcon = L.divIcon({
+      className: 'marker-household',
+      html: `
+        <div style="width: 32px; height: 32px; background: #0f766e; border: 2.5px solid #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(15, 118, 110, 0.4);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        </div>
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+    const hMarker = L.marker([centerLat, centerLng], { icon: householdIcon }).addTo(map);
+    hMarker.bindPopup(`
+      <div style="font-size: 0.85rem; line-height: 1.4; color: #0f172a;">
+        <strong style="color: #0f766e;">Your Registered Household</strong><br/>
+        User: <b>${user.name}</b><br/>
+        Location: ${user.ward || 'Ward 5'} | ${user.panchayat || 'Ernakulam Central'}
+      </div>
+    `);
+  }
+}
+
+// Dedicated GIS Map View
 async function renderMapView(container, user) {
   container.innerHTML = `
-    <div class="card" style="padding: 14px;">
-      <div class="card-header" style="margin-bottom: 6px;">
+    <div class="card" style="padding: 16px;">
+      <div class="card-header" style="margin-bottom: 10px;">
         <h2 class="card-title">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan-light)" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon></svg>
           GIS Hazard & Water Safety Map
         </h2>
         <span class="badge ${isOfflineMode ? 'badge-warn' : 'badge-safe'}">
-          ${isOfflineMode ? 'Cached Map Data' : 'Live OSM Tiles'}
+          ${isOfflineMode ? 'Cached Offline Map' : 'Live Spatial View'}
         </span>
       </div>
 
-      <div id="mapContainer"></div>
+      <div id="mapContainer" class="gis-map-frame" style="height: 480px; margin-bottom: 12px;"></div>
 
       <div class="map-layer-controls">
         <label class="layer-toggle">
@@ -2728,11 +3068,19 @@ async function renderMapView(container, user) {
           <span>Water-Quality Patterns</span>
         </label>
       </div>
+
+      <div class="map-legend-bar" style="margin-top: 12px;">
+        <div class="legend-item"><span class="legend-dot area"></span> Registered Household</div>
+        <div class="legend-item"><span class="legend-dot verified"></span> Field-Verified Test</div>
+        <div class="legend-item"><span class="legend-dot hazard" style="background: #ef4444; border-radius: 50%;"></span> Preliminary Abnormal</div>
+        <div class="legend-item"><span class="legend-dot hazard" style="background: #f59e0b;"></span> Hazard / Waterlogging Zone</div>
+        <div class="legend-item"><span class="legend-dot area" style="background: #94a3b8;"></span> Ward Boundary</div>
+      </div>
     </div>
   `;
 
   bindMapLayerControls(user);
-  await initLeafletMap(user);
+  await mountGisMap('mapContainer', user, mapLayers);
 }
 
 function bindMapLayerControls(user) {
@@ -2748,175 +3096,15 @@ function bindMapLayerControls(user) {
   mapInputs.forEach(({ id, key }) => {
     document.getElementById(id)?.addEventListener('change', (e) => {
       mapLayers[key] = e.target.checked;
-      initLeafletMap(user);
+      mountGisMap('mapContainer', user, mapLayers);
     });
   });
 }
 
 async function initLeafletMap(user) {
-  if (activeMapInstance) {
-    activeMapInstance.remove();
-    activeMapInstance = null;
-  }
-
-  const mapElement = document.getElementById('mapContainer');
-  if (!mapElement) return;
-
-  const currentWard = WARDS.find((w) => w.id === user.ward) || WARDS[4];
-  const centerLat = user.lat || currentWard.center[0];
-  const centerLng = user.lng || currentWard.center[1];
-
-  const map = L.map('mapContainer', {
-    zoomControl: true,
-    attributionControl: false
-  }).setView([centerLat, centerLng], 14);
-
-  activeMapInstance = map;
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18,
-    crossOrigin: true
-  }).addTo(map);
-
-  // Registered Community Boundaries
-  if (mapLayers.wards) {
-    WARDS.forEach((ward) => {
-      const isUserWard = ward.id === user.ward;
-      const polygon = L.polygon(ward.polygon, {
-        color: isUserWard ? '#38bdf8' : '#64748b',
-        weight: isUserWard ? 3 : 1.5,
-        fillColor: ward.rainfall === 'Heavy' ? '#0284c7' : '#334155',
-        fillOpacity: 0.25
-      }).addTo(map);
-
-      polygon.bindPopup(`
-        <div style="font-size: 0.85rem; line-height: 1.45;">
-          <strong style="color: #38bdf8;">Actual Data: Registered Community</strong><br/>
-          Community: <b>${ward.name}</b><br/>
-          Environmental Rainfall: <b>${ward.rainfall} (${ward.rainfallMm}mm)</b><br/>
-          Flooding / Waterlogging: <b>${ward.floodRisk}</b>
-        </div>
-      `);
-    });
-  }
-
-  // Environmental Hazard Data: Flood & Rainfall Affected Zones
-  if (mapLayers.hazard) {
-    FLOOD_HAZARD_ZONES.forEach((zone) => {
-      const poly = L.polygon(zone.polygon, {
-        color: '#f59e0b',
-        weight: 1.5,
-        fillColor: '#f59e0b',
-        fillOpacity: 0.28
-      }).addTo(map);
-
-      poly.bindPopup(`
-        <div style="font-size: 0.85rem; line-height: 1.45;">
-          <strong style="color: #fbbf24;">Environmental Data</strong><br/>
-          Flooding / Waterlogging Affected Area<br/>
-          <small style="color: var(--text-dim);">Observed surface water accumulation zone.</small>
-        </div>
-      `);
-    });
-  }
-
-  // Derived Information: Possible Water-Quality Pattern / Clusters
-  if (mapLayers.clusters && (user.ward === 'Ward 5' || currentWard.id === 'Ward 5')) {
-    const circle = L.circle(currentWard.center, {
-      radius: 460,
-      color: '#ef4444',
-      fillColor: '#ef4444',
-      fillOpacity: 0.22,
-      weight: 2
-    }).addTo(map);
-
-    circle.bindPopup(`
-      <div style="font-size: 0.85rem; line-height: 1.45;">
-        <strong style="color: #f87171;">Derived Information</strong><br/>
-        Possible water-quality pattern detected based on multiple abnormal reports.<br/>
-        <small style="color: var(--text-dim);">Derived spatial indicator; authorized field verification recommended.</small>
-      </div>
-    `);
-  }
-
-  // Actual Data: Water-Test Reports (Preliminary Positives/Abnormals)
-  if (mapLayers.preliminary) {
-    try {
-      const allTests = await dbGetAllWaterTests();
-      const prelimTests = allTests.filter((t) => t.ward === user.ward && isTestAbnormalOrPositive(t.result));
-      prelimTests.forEach((t) => {
-        const pLat = t.lat || (centerLat + (Math.random() - 0.5) * 0.006);
-        const pLng = t.lng || (centerLng + (Math.random() - 0.5) * 0.006);
-        const marker = L.circleMarker([pLat, pLng], {
-          radius: 6,
-          color: '#f87171',
-          fillColor: '#ef4444',
-          fillOpacity: 0.85,
-          weight: 1.5
-        }).addTo(map);
-
-        marker.bindPopup(`
-          <div style="font-size: 0.85rem; line-height: 1.4;">
-            <strong style="color: #f87171;">Actual Data: Water-Test Report</strong><br/>
-            Test Type: <b>${t.test_type || t.testType || 'Home Screening'}</b><br/>
-            Result: <b style="color: #f87171;">${t.result}</b><br/>
-            Date: ${t.date_time || t.date || 'Recent'}
-          </div>
-        `);
-      });
-    } catch (e) {}
-  }
-
-  // Actual Data: Field-Verified Reports
-  if (mapLayers.verified) {
-    try {
-      const allTests = await dbGetAllWaterTests();
-      const verifiedTests = allTests.filter((t) => t.ward === user.ward && (t.verification_status === 'Verified' || (t.fieldVerification && t.fieldVerification.status === 'Verified')));
-      verifiedTests.forEach((t) => {
-        const vLat = t.lat || (centerLat + (Math.random() - 0.5) * 0.005);
-        const vLng = t.lng || (centerLng + (Math.random() - 0.5) * 0.005);
-        const marker = L.circleMarker([vLat, vLng], {
-          radius: 7,
-          color: '#38bdf8',
-          fillColor: '#0284c7',
-          fillOpacity: 0.9,
-          weight: 2
-        }).addTo(map);
-
-        marker.bindPopup(`
-          <div style="font-size: 0.85rem; line-height: 1.4;">
-            <strong style="color: #38bdf8;">Actual Data: Field-Verified Report</strong><br/>
-            Tester: <b>${t.tester_name || 'Certified Field Tester'}</b><br/>
-            Verification Result: <b>${t.result || 'Verified'}</b><br/>
-            Status: <b style="color: #34d399;">Field Verified</b>
-          </div>
-        `);
-      });
-    } catch (e) {}
-  }
-
-  // Actual Data: Registered Household Location
-  if (mapLayers.household && user.role !== 'field_tester') {
-    const householdIcon = L.divIcon({
-      className: 'marker-household',
-      html: `
-        <div style="width: 32px; height: 32px; background: #0284c7; border: 2.5px solid #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px #0ea5e9;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffffff"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-        </div>
-      `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
-    });
-    const hMarker = L.marker([centerLat, centerLng], { icon: householdIcon }).addTo(map);
-    hMarker.bindPopup(`
-      <div style="font-size: 0.85rem; line-height: 1.4;">
-        <strong style="color: #38bdf8;">Actual Data: Registered Household Location</strong><br/>
-        User: <b>${user.name}</b><br/>
-        Ward: ${user.ward || 'Local Ward'}
-      </div>
-    `);
-  }
+  await mountGisMap('mapContainer', user, mapLayers);
 }
+
 
 // ----------------------------------------------------
 // ALERTS & ALTERNATE SOLUTIONS
@@ -2955,11 +3143,11 @@ function renderAlertCardWithSolutions(a, user) {
         <span class="badge ${a.severity === 'hazard' ? 'badge-danger' : 'badge-warn'}">${a.badge}</span>
       </div>
 
-      <div class="alert-body" style="font-size: 0.88rem; line-height: 1.5; color: #f1f5f9; margin-bottom: 8px;">
+      <div class="alert-body" style="font-size: 0.88rem; line-height: 1.5; color: var(--text-main); margin-bottom: 8px;">
         ${a.message}
       </div>
 
-      ${a.details ? `<div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">ℹ️ ${a.details}</div>` : ''}
+      ${a.details ? `<div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">ℹ️ ${a.details}</div>` : ''}
 
       ${
         solutions.length > 0
@@ -3051,16 +3239,17 @@ async function renderAlertsView(container, user) {
       <div class="card-header" style="flex-wrap: wrap; gap: 8px;">
         <div>
           <h2 class="card-title">Active Hazards & Alternate Solutions</h2>
-          <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
             Targeted remediation, safe water alternatives, and preventive steps for ${user.ward}
           </div>
         </div>
         <span class="badge ${alerts.length > 0 ? 'badge-danger' : 'badge-safe'}">${alerts.length} Active Alerts</span>
       </div>
 
-      <div style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 16px; font-size: 0.82rem; color: #bae6fd; line-height: 1.5;">
+      <div style="background: var(--primary-light); border: 1px solid var(--primary-border); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 16px; font-size: 0.82rem; color: var(--text-main); line-height: 1.5;">
         💡 <strong>Actionable Household Guidance:</strong> Each alert below includes tested alternate safe-water solutions, disinfection protocols, or municipal relief resources. You can mark which solutions you have applied to keep track of your family's safety.
       </div>
+
 
       ${
         alerts.length > 0
@@ -3118,7 +3307,7 @@ async function renderHouseholdProfile(container, user) {
         <h2 class="card-title">Household Profile</h2>
         <span class="badge badge-safe">Active Session</span>
       </div>
-      <div style="font-size: 0.9rem; line-height: 1.8; color: #e2e8f0;">
+      <div style="font-size: 0.9rem; line-height: 1.8; color: var(--text-main);">
         <div><strong>Name:</strong> ${user.name}</div>
         <div><strong>Username:</strong> ${user.username}</div>
         <div><strong>Ward:</strong> ${user.ward}</div>
@@ -3147,16 +3336,17 @@ function showToast(message) {
   toast.id = 'appToast';
   toast.style.cssText = `
     position: fixed;
-    top: 66px;
+    top: 72px;
     left: 50%;
     transform: translateX(-50%);
     background: #0f172a;
-    border: 1px solid #38bdf8;
-    color: #e2e8f0;
-    padding: 8px 16px;
+    border: 1px solid #334155;
+    color: #ffffff;
+    padding: 8px 18px;
     border-radius: 9999px;
     font-size: 0.82rem;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    font-weight: 500;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -3170,3 +3360,4 @@ function showToast(message) {
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3200);
 }
+
