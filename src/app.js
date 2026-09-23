@@ -156,7 +156,34 @@ function updateNetworkBadge() {
   }
 }
 
-// ====================================================
+// Creative AquaGuard Shield & Droplet Logo
+function getAquaGuardLogoSvg(size = 36, idSuffix = 'main') {
+  return `
+    <svg width="${size}" height="${size}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="aquaguard-brand-svg">
+      <defs>
+        <linearGradient id="aqGrad_${idSuffix}" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#14b8a6"/>
+          <stop offset="100%" stop-color="#0f766e"/>
+        </linearGradient>
+        <linearGradient id="aqDrop_${idSuffix}" x1="24" y1="14" x2="24" y2="34" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="100%" stop-color="#e0f2fe"/>
+        </linearGradient>
+      </defs>
+      <!-- Base Emblem -->
+      <rect x="2" y="2" width="44" height="44" rx="12" fill="url(#aqGrad_${idSuffix})" stroke="#2dd4bf" stroke-width="1.2"/>
+      <!-- Shield Contour -->
+      <path d="M24 9C29.5 9 34 11.5 35 17C36 25 30 32.5 24 37C18 32.5 12 25 13 17C14 11.5 18.5 9 24 9Z" fill="rgba(255, 255, 255, 0.16)" stroke="rgba(255, 255, 255, 0.65)" stroke-width="1.2" stroke-linejoin="round"/>
+      <!-- Luminous Droplet -->
+      <path d="M24 13.5C24 13.5 31.5 23 31.5 28C31.5 32.142 28.142 35.5 24 35.5C19.858 35.5 16.5 32.142 16.5 28C16.5 23 24 13.5 24 13.5Z" fill="url(#aqDrop_${idSuffix})"/>
+      <!-- Health & Safety Checkmark -->
+      <path d="M20 28L22.8 30.8L28 25" stroke="#0f766e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Light Reflection -->
+      <ellipse cx="20.5" cy="23.5" rx="1.5" ry="2.2" transform="rotate(-25 20.5 23.5)" fill="#ffffff" opacity="0.9"/>
+    </svg>
+  `;
+}
+
 // ====================================================
 // 1. VISIBLE NEW LOGIN SCREEN WITH TWO USER TYPES & REGISTRATION
 // ====================================================
@@ -166,7 +193,7 @@ function renderAuthScreen() {
       <div class="auth-wrapper">
         <div class="auth-hero">
           <div class="auth-logo">
-            <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            ${getAquaGuardLogoSvg(72, 'reg')}
           </div>
           <h1 class="auth-title">Create Household Account</h1>
           <p class="auth-subtitle">Register your household in AquaGuard</p>
@@ -220,8 +247,8 @@ function renderAuthScreen() {
     return `
       <div class="auth-wrapper">
         <div class="auth-hero">
-          <div class="auth-logo" style="background: var(--accent-teal-gradient);">
-            <svg viewBox="0 0 24 24" fill="#ffffff"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <div class="auth-logo">
+            ${getAquaGuardLogoSvg(72, 'tester_reg')}
           </div>
           <h1 class="auth-title">Create Field Tester Account</h1>
           <p class="auth-subtitle">Register as a Certified Water Quality Field Tester</p>
@@ -352,7 +379,7 @@ function renderAuthScreen() {
     <div class="auth-wrapper">
       <div class="auth-hero">
         <div class="auth-logo">
-          <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+          ${getAquaGuardLogoSvg(76, 'login')}
         </div>
         <h1 class="auth-title">AquaGuard</h1>
         <p class="auth-subtitle">Household Water Safety & Community Alert System</p>
@@ -657,8 +684,8 @@ function renderFieldTesterShell(root, user) {
     <header class="app-header">
       <div style="display: flex; align-items: center; gap: 20px;">
         <div class="brand-badge" id="btnHeaderTester" style="cursor: pointer;">
-          <div class="brand-icon" style="background: var(--primary);">
-            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <div class="brand-icon">
+            ${getAquaGuardLogoSvg(36, 'tester_hdr')}
           </div>
           <div>
             <span class="brand-name">AquaGuard</span>
@@ -1399,7 +1426,7 @@ function renderHouseholdShell(root, user) {
       <div style="display: flex; align-items: center; gap: 20px;">
         <div class="brand-badge" id="btnHeaderHome" style="cursor: pointer;">
           <div class="brand-icon">
-            <svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            ${getAquaGuardLogoSvg(36, 'home_hdr')}
           </div>
           <div>
             <span class="brand-name">AquaGuard</span>

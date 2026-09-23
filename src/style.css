@@ -107,33 +107,36 @@ body {
   gap: 16px;
 }
 
-.brand-wrapper {
+.brand-wrapper, .brand-badge {
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
   text-decoration: none;
+  user-select: none;
 }
 
-.brand-logo-badge {
-  width: 34px;
-  height: 34px;
-  background: var(--primary);
-  color: #fff;
-  border-radius: var(--radius-md);
-  display: flex;
+.brand-icon, .brand-logo-badge {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  transition: transform 0.15s ease;
 }
 
-.brand-logo-badge svg {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
+.brand-icon:hover, .brand-logo-badge:hover {
+  transform: scale(1.05);
 }
+
+.brand-icon svg, .brand-logo-badge svg {
+  width: 36px;
+  height: 36px;
+  display: block;
+}
+
 
 .brand-info {
   display: flex;
@@ -1102,6 +1105,26 @@ textarea.form-control {
   text-align: center;
   margin-bottom: 24px;
 }
+
+.auth-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+  filter: drop-shadow(0 6px 18px rgba(15, 118, 110, 0.25));
+  transition: transform 0.2s ease;
+}
+
+.auth-logo:hover {
+  transform: translateY(-2px) scale(1.04);
+}
+
+.auth-logo svg {
+  width: 68px;
+  height: 68px;
+  display: block;
+}
+
 
 .auth-header h1, .auth-title {
   font-size: 1.6rem;
