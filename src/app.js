@@ -48,6 +48,21 @@ let testSubOption = 'optionA'; // 'optionA' (Individual) | 'optionB' (Book Field
 let selectedTesterForBooking = null;
 let searchRadius = 10; // km radius for matching nearby testers
 
+// Safe JSON Fetch helper that respects offline fallback and handles static hosts
+async function safeFetchJson(url, options = {}) {
+  try {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocalhost && !url.startsWith('http')) return null;
+
+    const res = await fetch(url, options);
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      return await res.json();
+    }
+  } catch (err) {}
+  return null;
+}
+
 // GIS Map state
 let activeMapInstance = null;
 let mapLayers = {
@@ -778,23 +793,22 @@ async function renderFieldTesterView(user) {
   let stats = { new_requests: 1, accepted: 1, completed: 1, pending_results: 0 };
 
   try {
-    const res = await fetch(`/api/requests?role=field_tester&user_id=${user.id || 1}`);
-    if (res.ok) {
-      const data = await res.json();
-      requests = data.requests || [];
+    const data = await safeFetchJson(`/api/requests?role=field_tester&user_id=${user.id || 1}`);
+    if (data && data.requests) {
+      requests = data.requests;
     } else {
-      throw new Error('API not available');
+      requests = await dbGetFieldRequestsByTester(user.id || user.name);
     }
   } catch (e) {
     requests = await dbGetFieldRequestsByTester(user.id || user.name);
   }
 
   try {
-    const sRes = await fetch(`/api/testers/stats/${user.id || 1}`);
-    if (sRes.ok) {
-      stats = await sRes.json();
+    const sData = await safeFetchJson(`/api/testers/stats/${user.id || 1}`);
+    if (sData) {
+      stats = sData;
     } else {
-      throw new Error('API stats not available');
+      throw new Error('Fallback to local stats');
     }
   } catch (e) {
     const newCount = requests.filter((r) => r.status === 'Pending' || r.status === 'Pending Field Tester Response' || r.status === 'Time Change Suggested').length;
@@ -896,7 +910,7 @@ async function renderFieldTesterView(user) {
 }
 
 function renderTesterRequestCard(r) {
-  const isPending = r.status === 'Pending';
+  const isPending = r.status === 'Pending' || r.status === 'Pending Field Tester Response';
   const isAccepted = r.status === 'Accepted';
   const isInProgress = r.status === 'Test In Progress';
   const isCompleted = r.status === 'Test Completed' || r.status === 'Verified';
@@ -1034,7 +1048,7 @@ function showViewRequestModal(req, user) {
         <!-- Action Buttons: [Accept Request], [Suggest Different Time], [Reject Request] -->
         <div style="display: flex; flex-direction: column; gap: 8px;">
           ${
-            req.status === 'Pending' || req.status === 'Time Change Suggested'
+            req.status === 'Pending' || req.status === 'Pending Field Tester Response' || req.status === 'Time Change Suggested'
               ? `
             <button class="btn btn-success" id="btnModalAcceptReq">
               [Accept Request]
@@ -1268,10 +1282,32 @@ function showSubmitFieldTestResultModal({ reqId, hname, ward, test, user }) {
       reqObj.observations = observations || 'Field inspection completed.';
       reqObj.lab_status = result === 'Abnormal' ? 'Recommended' : 'Not Required';
       await dbUpdateFieldRequest(reqObj);
+
+      // Record field-verified test for household
+      const verifiedTestRecord = {
+        user_id: reqObj.user_id,
+        username: reqObj.username,
+        ward: reqObj.ward,
+        panchayat: reqObj.panchayat || 'Puzhakkal Panchayat',
+        test_type: `${reqObj.test_type || test}`,
+        source: 'field',
+        tester_name: user.name,
+        result: result,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date_time: `${new Date().toISOString().split('T')[0]} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        notes: observations || notes || `Field verified test performed by certified inspector ${user.name}`,
+        lat: reqObj.lat || 10.545,
+        lng: reqObj.lng || 76.205,
+        verification_status: 'Verified',
+        lab_status: result === 'Abnormal' ? 'Recommended' : 'Not Required',
+        timestamp: Date.now()
+      };
+      await dbSaveWaterTest(verifiedTestRecord);
     }
 
     host.innerHTML = '';
-    showToast('Field test result submitted successfully. Status: Test Completed.');
+    showToast('Field test result submitted successfully! Verified report recorded.');
     renderFieldTesterView(user);
   });
 }
@@ -1599,13 +1635,10 @@ async function renderHouseholdHome(container, user) {
   // Real-time tests strictly isolated to the logged-in user
   let userTests = [];
   try {
-    if (navigator.onLine && (user.id || user.username)) {
-      const q = user.id ? `user_id=${user.id}` : `username=${encodeURIComponent(user.username)}`;
-      const res = await fetch(`/api/tests?${q}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.tests) userTests = data.tests;
-      }
+    const q = user.id ? `user_id=${user.id}` : `username=${encodeURIComponent(user.username)}`;
+    const tData = await safeFetchJson(`/api/tests?${q}`);
+    if (tData && tData.tests) {
+      userTests = tData.tests;
     }
   } catch (e) {}
 
@@ -1614,6 +1647,7 @@ async function renderHouseholdHome(container, user) {
       userTests = await dbGetWaterTestsByUser(user.username);
     } catch (e) {}
   }
+  userTests.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   const latestTest = userTests.length > 0 ? userTests[0] : null;
 
   // Real-time Field Tester request status strictly isolated to the logged-in user
@@ -2244,22 +2278,19 @@ function bindHouseholdTestEvents(user) {
       timestamp: Date.now()
     };
 
-    if (navigator.onLine) {
-      try {
-        await fetch('/api/tests', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(testRecord)
-        });
-      } catch (err) {}
-    }
+    await safeFetchJson('/api/tests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(testRecord)
+    });
     await dbSaveWaterTest(testRecord);
+    showToast('Water screening test recorded successfully!');
 
     if (result === 'Normal') {
       showAbnormalModal({
         isAbnormal: false,
         title: 'Screening Complete',
-        message: 'No abnormal indication was recorded in this preliminary screening.',
+        message: 'No abnormal indication was recorded in this preliminary screening. Your drinking water parameters are within standard baseline.',
         onContinue: () => switchTab('home')
       });
     } else if (result === 'Inconclusive') {
@@ -2273,7 +2304,7 @@ function bindHouseholdTestEvents(user) {
       showAbnormalModal({
         isAbnormal: true,
         title: 'Possible Water-Quality Concern',
-        message: 'Possible water-quality concern detected. Professional field verification is recommended.',
+        message: 'Possible water-quality concern detected. Professional field verification by a certified tester is recommended.',
         onBook: () => {
           testSubOption = 'optionB';
           selectedTesterForBooking = null;
@@ -2313,17 +2344,14 @@ function bindHouseholdTestEvents(user) {
     };
 
     let createdReq = null;
-    try {
-      const res = await fetch('/api/requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        createdReq = data.request;
-      }
-    } catch (err) {}
+    const data = await safeFetchJson('/api/requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (data && data.request) {
+      createdReq = data.request;
+    }
 
     if (!createdReq) {
       createdReq = {
@@ -2334,16 +2362,17 @@ function bindHouseholdTestEvents(user) {
       };
     }
     await dbSaveFieldRequest(createdReq);
+    showToast(`Request sent to ${createdReq.field_tester_name}!`);
 
     const noticeDiv = document.getElementById('testNoticeContainer');
     if (noticeDiv) {
       noticeDiv.innerHTML = `
-        <div class="notice-box notice-success" style="flex-direction: column; align-items: flex-start;">
-          <div style="font-weight: 800; font-size: 1.05rem; color: #34d399; margin-bottom: 4px;">
-            Request Sent
+        <div class="notice-box notice-success" style="flex-direction: column; align-items: flex-start; margin-bottom: 20px;">
+          <div style="font-weight: 700; font-size: 1.05rem; color: var(--status-safe-text); margin-bottom: 4px;">
+            ✓ Request Sent to Field Tester
           </div>
-          <div style="font-size: 0.9rem; line-height: 1.6; color: #fff;">
-            Your request has been sent to <strong>${createdReq.field_tester_name}</strong>.<br/>
+          <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main);">
+            Your request has been dispatched to <strong>${createdReq.field_tester_name}</strong>.<br/>
             Request ID: <b>${createdReq.id}</b><br/>
             Status: <span class="badge badge-warn">Pending Field Tester Response</span>
           </div>
@@ -2366,7 +2395,7 @@ function showAbnormalModal({ isAbnormal, title, message, onBook, onContinue }) {
   host.innerHTML = `
     <div class="prompt-modal-overlay">
       <div class="prompt-modal-card">
-        <div class="prompt-modal-title" style="color: ${isAbnormal ? '#fbbf24' : '#34d399'};">
+        <div class="prompt-modal-title" style="color: ${isAbnormal ? '#d97706' : '#059669'};">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             ${
               isAbnormal
@@ -2382,11 +2411,14 @@ function showAbnormalModal({ isAbnormal, title, message, onBook, onContinue }) {
         <div style="display: flex; flex-direction: column; gap: 8px;">
           ${
             isAbnormal && onBook
-              ? `<button class="btn btn-primary" id="btnModalBook">Book Field Tester</button>`
+              ? `<button class="btn btn-primary" id="btnModalBook">Book Nearby Field Tester →</button>`
               : ''
           }
+          <button class="btn btn-secondary" id="btnModalViewTests">
+            View in My Tests
+          </button>
           <button class="btn btn-secondary" id="btnModalContinue">
-            ${isAbnormal ? 'Continue Without Booking' : 'Return to Dashboard'}
+            Return to Dashboard
           </button>
         </div>
       </div>
@@ -2396,6 +2428,11 @@ function showAbnormalModal({ isAbnormal, title, message, onBook, onContinue }) {
   document.getElementById('btnModalBook')?.addEventListener('click', () => {
     host.innerHTML = '';
     if (onBook) onBook();
+  });
+
+  document.getElementById('btnModalViewTests')?.addEventListener('click', () => {
+    host.innerHTML = '';
+    switchTab('mytests');
   });
 
   document.getElementById('btnModalContinue')?.addEventListener('click', () => {
@@ -2410,16 +2447,16 @@ function showAbnormalModal({ isAbnormal, title, message, onBook, onContinue }) {
 async function renderHouseholdMyRequests(container, user) {
   let requests = [];
   try {
-    const res = await fetch(`/api/requests?role=household&user_id=${user.id || 4}`);
-    if (res.ok) {
-      const data = await res.json();
-      requests = data.requests || [];
+    const data = await safeFetchJson(`/api/requests?role=household&user_id=${user.id || 4}`);
+    if (data && data.requests) {
+      requests = data.requests;
     } else {
-      throw new Error('API not available');
+      requests = await dbGetFieldRequestsByUser(user.username);
     }
   } catch (e) {
     requests = await dbGetFieldRequestsByUser(user.username);
   }
+  requests.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
   container.innerHTML = `
     <div class="card">
@@ -2563,12 +2600,16 @@ function renderHouseholdRequestCard(r) {
 async function renderHouseholdMyTests(container, user) {
   let tests = [];
   try {
-    const res = await fetch(`/api/tests?username=${user.username}`);
-    const data = await res.json();
-    tests = data.tests || [];
+    const data = await safeFetchJson(`/api/tests?username=${encodeURIComponent(user.username)}`);
+    if (data && data.tests) {
+      tests = data.tests;
+    } else {
+      tests = await dbGetWaterTestsByUser(user.username);
+    }
   } catch (e) {
     tests = await dbGetWaterTestsByUser(user.username);
   }
+  tests.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
   container.innerHTML = `
     <div class="card">

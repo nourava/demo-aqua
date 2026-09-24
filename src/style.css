@@ -738,52 +738,210 @@ textarea.form-control {
   margin-bottom: 16px;
 }
 
+/* ===================================================
+   STEPPER & WORKFLOW LIFECYCLE
+   =================================================== */
+.workflow-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.workflow-step.active {
+  color: var(--primary);
+}
+
+.workflow-step.completed {
+  color: var(--status-safe-text);
+}
+
+.workflow-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-muted);
+  border: 1.5px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.workflow-step.active .workflow-dot {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.workflow-step.completed .workflow-dot {
+  background: var(--status-safe-bg);
+  border-color: var(--status-safe-border);
+  color: var(--status-safe-text);
+}
+
+.workflow-line {
+  flex: 1;
+  max-width: 40px;
+  height: 2px;
+  background: var(--border-color);
+}
+
+.workflow-line.active {
+  background: var(--primary);
+}
+
+/* ===================================================
+   TEST WATER PAGE (OPTION A & OPTION B)
+   =================================================== */
+.test-options-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
 @media (min-width: 600px) {
   .test-options-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-.test-option-card {
+.option-select-card, .test-option-card {
   background: var(--bg-surface);
-  border: 2px solid var(--border-color);
+  border: 1.5px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 16px 18px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  position: relative;
 }
 
-.test-option-card:hover {
+.option-select-card:hover, .test-option-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.option-select-card.active, .test-option-card.selected {
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.option-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+
+.option-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.option-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Result Options (Normal / Abnormal / Inconclusive) */
+.result-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 6px;
+}
+
+@media (max-width: 480px) {
+  .result-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+.result-option {
+  cursor: pointer;
+  display: block;
+}
+
+.result-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.result-box {
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 10px;
+  text-align: center;
+  font-size: 0.86rem;
+  font-weight: 600;
+  background: var(--bg-surface);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.result-option:hover .result-box {
   border-color: var(--border-strong);
 }
 
-.test-option-card.selected {
-  border-color: var(--primary);
-  background-color: var(--primary-light);
+.res-neg {
+  color: var(--status-safe-text);
+}
+.res-pos {
+  color: var(--status-danger-text);
+}
+.res-inc {
+  color: var(--status-warn-text);
 }
 
-.test-option-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: var(--text-main);
+.result-option input[type="radio"]:checked + .result-box.res-neg {
+  background: var(--status-safe-bg);
+  border-color: #10b981;
+  box-shadow: 0 0 0 1.5px #10b981;
 }
 
-.test-option-header svg {
-  width: 22px;
-  height: 22px;
-  color: var(--primary);
+.result-option input[type="radio"]:checked + .result-box.res-pos {
+  background: var(--status-danger-bg);
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1.5px #ef4444;
 }
 
-.test-option-desc {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
+.result-option input[type="radio"]:checked + .result-box.res-inc {
+  background: var(--status-warn-bg);
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 1.5px #f59e0b;
 }
 
 /* Tester Item in Option B */
@@ -791,8 +949,8 @@ textarea.form-control {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  margin-bottom: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -802,23 +960,256 @@ textarea.form-control {
 
 .tester-item:hover {
   border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .tester-item-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .tester-item-name {
-  font-size: 0.94rem;
-  font-weight: 600;
+  font-size: 0.96rem;
+  font-weight: 700;
   color: var(--text-main);
 }
 
 .tester-item-meta {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ===================================================
+   MY TESTS & MY REQUESTS CARDS
+   =================================================== */
+.my-test-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.15s ease;
+}
+
+.my-test-card:hover {
+  border-color: var(--border-strong);
+}
+
+.my-test-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.status-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.76rem;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.status-chip.field-verified {
+  background: var(--status-safe-bg);
+  color: var(--status-safe-text);
+  border: 1px solid var(--status-safe-border);
+}
+
+.status-chip.field-pending {
+  background: var(--status-warn-bg);
+  color: var(--status-warn-text);
+  border: 1px solid var(--status-warn-border);
+}
+
+.status-chip.lab-rec {
+  background: var(--status-info-bg);
+  color: var(--status-info-text);
+  border: 1px solid var(--status-info-border);
+}
+
+.time-change-banner {
+  background: var(--status-warn-bg);
+  border: 1px solid var(--status-warn-border);
+  color: var(--status-warn-text);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+
+/* ===================================================
+   FIELD TESTER METRICS & PORTAL
+   =================================================== */
+.tester-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 768px) {
+  .tester-metrics-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.metric-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  text-align: center;
+}
+
+.metric-val {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.metric-lbl {
+  font-size: 0.74rem;
+  font-weight: 600;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tester-nav-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.tester-nav-tab {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 6px 14px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.tester-nav-tab:hover {
+  border-color: var(--border-strong);
+  color: var(--text-main);
+}
+
+.tester-nav-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.request-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.request-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.request-id {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.request-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+@media (min-width: 600px) {
+  .request-meta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.request-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* Notice & Alerts */
+.notice-box {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notice-success {
+  background: var(--status-safe-bg);
+  border: 1px solid var(--status-safe-border);
+  color: var(--status-safe-text);
+}
+
+.notice-offline {
+  background: var(--status-warn-bg);
+  border: 1px solid var(--status-warn-border);
+  color: var(--status-warn-text);
+}
+
+/* Button & Badge Variants */
+.btn-warn {
+  background-color: #d97706;
+  color: #ffffff;
+}
+.btn-warn:hover {
+  background-color: #b45309;
+}
+
+.badge-warn {
+  background-color: var(--status-warn-bg);
+  border: 1px solid var(--status-warn-border);
+  color: var(--status-warn-text);
+}
+
+.prompt-modal-body {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
 }
 
 /* ===================================================
